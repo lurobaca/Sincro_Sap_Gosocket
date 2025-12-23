@@ -1,0 +1,11 @@
+﻿################################################################################
+# Este archivo .gitignore ha sido creado automáticamente por Microsoft(R) Visual Studio.
+################################################################################
+
+/.vs
+/Sincro_Sap_Gosocket/.vs/Sincro_Sap_Gosocket/v17
+/Sincro_Sap_Gosocket/.vs/Sincro_Sap_Gosocket/FileContentIndex
+/Sincro_Sap_Gosocket/.vs/Sincro_Sap_Gosocket/DesignTimeBuild
+/Sincro_Sap_Gosocket/.vs/Sincro_Sap_Gosocket/CopilotIndices/17.14.939.21063
+/Sincro_Sap_Gosocket/Sincro_Sap_Gosocket/obj
+/Sincro_Sap_Gosocket/Sincro_Sap_Gosocket/appsettings.Production.json
