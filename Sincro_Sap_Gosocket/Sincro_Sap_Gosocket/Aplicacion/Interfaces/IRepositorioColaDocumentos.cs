@@ -9,25 +9,31 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Interfaces
         Task<IReadOnlyList<DocumentoCola>> ClaimPendientesAsync(int batchSize, string workerId, CancellationToken ct);
     }
 
-    public sealed class DocumentoCola
+    public class DocumentoCola
     {
-        public long QueueId { get; set; }
-        public string ObjType { get; set; } = "";   // en tabla es VARCHAR(10)
+        public long DocumentosPendientes_Id { get; set; }
+        public string ObjType { get; set; }
         public int DocEntry { get; set; }
         public int? DocNum { get; set; }
-        public string? DocSubType { get; set; }
-        public string? DocType { get; set; }
-        public string? CardCode { get; set; }
-        public DateTime? TaxDate { get; set; }
-        public string Status { get; set; } = "";
+        public string DocSubType { get; set; }
+        public string DocType { get; set; }
+        public string CandCode { get; set; }
+        public string IsoRule { get; set; }
+        public string Status { get; set; }
         public int AttemptCount { get; set; }
         public DateTime? NextAttemptAt { get; set; }
         public DateTime? LastAttemptAt { get; set; }
-        public string? LockedBy { get; set; }
         public DateTime? LockedAt { get; set; }
-        public string? LastError { get; set; }
+        public string LockedBy { get; set; }
+        public string LastError { get; set; }
 
-        // Helper para tu switch (13,14,18)
-        public int ObjTypeInt => int.TryParse(ObjType, out var n) ? n : 0;
+        // Propiedades adicionales del documento
+        public string TipoCE { get; set; }
+        public string SituacionDeComprobante { get; set; }
+        public string Remitente { get; set; }
+        public string Receptor { get; set; }
+        public int? Folio { get; set; }
+        public string FirmaDigital { get; set; }
+        public DateTime FechaCreacion { get; set; }
     }
 }

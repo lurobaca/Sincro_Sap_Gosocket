@@ -1,4 +1,6 @@
-﻿namespace Sincro_Sap_Gosocket.Aplicacion.Interfaces
+﻿using System.Data;
+
+namespace Sincro_Sap_Gosocket.Aplicacion.Interfaces
 {
     public interface ITraductorXml
     {
@@ -8,6 +10,10 @@
         /// <param name="tipo">FE, NC, ND, FEC</param>
         /// <param name="datos">Resultado del SP (DataSet/DataTable/DTO)</param>
         /// <returns>XML listo para enviar</returns>
-        string Traducir(string tipo, object datos);
+ 
+
+        string Traducir(string tipoDocumento, DataTable datos);
+        // O si solo usa un parámetro:
+        // string Traducir(DataTable datos);
     }
 }

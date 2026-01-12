@@ -1,70 +1,89 @@
-﻿using System.Threading;
+﻿// Sincro_Sap_Gosocket/Aplicacion/Interfaces/IClienteGosocket.cs
 using System.Threading.Tasks;
+using Sincro_Sap_Gosocket.Infraestructura.Gosocket.Dtos.Comun;
+using Sincro_Sap_Gosocket.Infraestructura.Gosocket.Dtos.Peticiones;
+using Sincro_Sap_Gosocket.Infraestructura.Gosocket.Dtos.Respuestas;
 
 namespace Sincro_Sap_Gosocket.Aplicacion.Interfaces
 {
+    /// <summary>
+    /// Cliente principal para interactuar con la API de GoSocket
+    /// Implementa los métodos descritos en el manual v10
+    /// </summary>
     public interface IClienteGosocket
     {
-        /// <summary>
-        /// Envía el XML (ya traducido a GoSocket/xDoc) hacia GoSocket para enviarlo a la Autoridad.
-        /// </summary>
-        Task<GosocketSendResult> EnviarAsync(string xmlUtf8, CancellationToken ct);
+        // ========== MÉTODOS DE CONSULTA ==========
 
         /// <summary>
-        /// Consulta el estado/detalle de un documento en GoSocket por su identificador (trackId / documentId).
+        /// Consulta información de una cuenta/contribuyente (GETACCOUNT)
+        /// Manual v10 - Páginas 266, 272, 281
         /// </summary>
-        Task<GosocketGetDocumentResult> GetDocumentoAsync(string documentId, CancellationToken ct);
+        Task<RespuestaApi<RespuestaGetAccount>> ConsultarCuentaAsync(PeticionGetAccount peticion);
 
         /// <summary>
-        /// Descarga el XML almacenado en GoSocket.
+        /// Consulta el estado y metadata de un documento (GETDOCUMENT)
+        /// Manual v10 - Página 223
         /// </summary>
-        Task<GosocketFileResult> DescargarXmlAsync(string documentId, CancellationToken ct);
+        Task<RespuestaApi<RespuestaGetDocument>> ObtenerDocumentoAsync(PeticionGetDocument peticion);
+
+        // ========== MÉTODOS DE ENVÍO ==========
 
         /// <summary>
-        /// Descarga el PDF almacenado en GoSocket.
+        /// Envía un documento a la autoridad tributaria (SENDDOCUMENTTOAUTHORITY)
+        /// Manual v10 - Página 19
         /// </summary>
-        Task<GosocketFileResult> DescargarPdfAsync(string documentId, CancellationToken ct);
+        Task<RespuestaApi<RespuestaSendDocumentToAuthority>> EnviarDocumentoAutoridadAsync(
+            PeticionSendDocumentToAuthority peticion);
 
         /// <summary>
-        /// Cambia el estado de un documento en GoSocket (si tu integración lo requiere).
+        /// Valida un documento sin enviarlo a la autoridad (SENDDOCUMENTTOVALIDATE)
+        /// Manual v10 - Página 118
         /// </summary>
-        Task<GosocketChangeStatusResult> CambiarEstadoAsync(string documentId, string newStatus, CancellationToken ct);
-    }
+        Task<RespuestaApi<RespuestaSendDocumentToAuthority>> ValidarDocumentoAsync(
+            PeticionSendDocumentToAuthority peticion);
 
-    // ===== DTOs mínimos (puedes moverlos a Infraestructura/Gosocket/ModelosGosocket.cs) =====
+        // ========== MÉTODOS DE DESCARGA ==========
 
-    public sealed class GosocketSendResult
-    {
-        public bool Ok { get; set; }
-        public int HttpStatus { get; set; }
-        public string? DocumentId { get; set; }     // trackId / id retornado por GoSocket
-        public string? Raw { get; set; }            // respuesta cruda (por trazabilidad)
-        public string? Error { get; set; }
-    }
+        /// <summary>
+        /// Descarga el XML de un documento (DOWNLOADDOCUMENTXML)
+        /// Manual v10 - Página 238
+        /// </summary>
+        Task<RespuestaApi<RespuestaDownloadDocumentXml>> DescargarXmlDocumentoAsync(
+            PeticionDownloadDocumentXml peticion);
 
-    public sealed class GosocketGetDocumentResult
-    {
-        public bool Ok { get; set; }
-        public int HttpStatus { get; set; }
-        public string? Raw { get; set; }
-        public string? Error { get; set; }
-    }
+        /// <summary>
+        /// Descarga el PDF de un documento (DOWNLOADDOCUMENTPDF)
+        /// Manual v10 - Página 250
+        /// </summary>
+        Task<RespuestaApi<RespuestaDownloadDocumentPdf>> DescargarPdfDocumentoAsync(
+            PeticionDownloadDocumentPdf peticion);
 
-    public sealed class GosocketFileResult
-    {
-        public bool Ok { get; set; }
-        public int HttpStatus { get; set; }
-        public byte[]? Content { get; set; }
-        public string? ContentType { get; set; }
-        public string? FileName { get; set; }
-        public string? Error { get; set; }
-    }
+        // ========== MÉTODOS DE DOCUMENTOS RECIBIDOS ==========
 
-    public sealed class GosocketChangeStatusResult
-    {
-        public bool Ok { get; set; }
-        public int HttpStatus { get; set; }
-        public string? Raw { get; set; }
-        public string? Error { get; set; }
+        /// <summary>
+        /// Obtiene la lista de documentos recibidos (GETRECEIVEDDOCUMENT)
+        /// Manual v10 - Página 131
+        /// </summary>
+        Task<RespuestaApi<object>> ObtenerDocumentosRecibidosAsync(object peticion);
+
+        /// <summary>
+        /// Marca documentos como recibidos (CONFIRMRECEIVEDDOCUMENT)
+        /// Manual v10 - Página 137
+        /// </summary>
+        Task<RespuestaApi<object>> ConfirmarDocumentosRecibidosAsync(object peticion);
+
+        // ========== MÉTODOS DE EVENTOS ==========
+
+        /// <summary>
+        /// Consulta eventos del documento ante la entidad tributaria (DOCUMENTGETEVENTS)
+        /// Manual v10 - Página 142
+        /// </summary>
+        Task<RespuestaApi<object>> ConsultarEventosDocumentoAsync(object peticion);
+
+        /// <summary>
+        /// Informa eventos en los documentos (CHANGEDOCUMENTSTATUS)
+        /// Manual v10 - Página 150
+        /// </summary>
+        Task<RespuestaApi<object>> CambiarEstadoDocumentoAsync(object peticion);
     }
 }

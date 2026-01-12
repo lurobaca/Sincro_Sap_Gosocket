@@ -8,6 +8,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Infraestructura\Gosocket\AuthService.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Compile Include="C:\Users\Luis Roberto Bastos\Documents\Proyectos Sincro Pack 2021\Clientes\Larce\Sincro_Sap_Gosocket\Sincro_Sap_Gosocket\Sincro_Sap_Gosocket\Program.cs" Link="Program.cs" />
     <Compile Include="C:\Users\Luis Roberto Bastos\Documents\Proyectos Sincro Pack 2021\Clientes\Larce\Sincro_Sap_Gosocket\Sincro_Sap_Gosocket\Sincro_Sap_Gosocket\Worker.cs" Link="Worker.cs" />
   </ItemGroup>
@@ -18,12 +22,14 @@
 	  <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="8.0.1" />
 	  <PackageReference Include="Microsoft.Extensions.Http" Version="8.0.1" />
 	  <PackageReference Include="Microsoft.Extensions.Logging.EventLog" Version="8.0.1" />
+	  <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
 	  <PackageReference Include="Serilog.Extensions.Hosting" Version="10.0.0" />
 	  <PackageReference Include="Serilog.Sinks.EventLog" Version="4.0.0" />
 	  <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="Infraestructura\Gosocket\Servicios\" />
     <Folder Include="Infraestructura\Mapeo\" />
   </ItemGroup>
 </Project>

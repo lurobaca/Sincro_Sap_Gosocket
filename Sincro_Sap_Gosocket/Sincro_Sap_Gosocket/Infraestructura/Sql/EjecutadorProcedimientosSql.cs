@@ -37,7 +37,7 @@ namespace Sincro_Sap_Gosocket.Infraestructura.Sql
             await using var cmd = new SqlCommand(spName, cn)
             {
                 CommandType = CommandType.StoredProcedure,
-                CommandTimeout = 120 // ajusta si ocupas
+                CommandTimeout = 120
             };
 
             if (parametros != null)
@@ -49,7 +49,6 @@ namespace Sincro_Sap_Gosocket.Infraestructura.Sql
                 }
             }
 
-            // Lector -> DataSet con tablas (ideal si tu SP devuelve Encabezado + Detalle + etc.)
             var ds = new DataSet();
 
             await using var reader = await cmd.ExecuteReaderAsync(ct);
@@ -100,12 +99,22 @@ namespace Sincro_Sap_Gosocket.Infraestructura.Sql
 
             return await cmd.ExecuteNonQueryAsync(ct);
         }
-        public async Task<object> EjecutarAsync(string spName, int docEntry, CancellationToken ct)
+
+        public async Task<string> EjecutarEscalarAsync(string spName, int docEntry, CancellationToken ct)
+        {
+            var p = new[]
+            {
+                new SqlParameter("@DocEntry", SqlDbType.Int) { Value = docEntry }
+            };
+            return await EjecutarEscalarAsync(spName, p, ct);
+        }
+
+        public async Task<string> EjecutarEscalarAsync(string spName, IEnumerable<SqlParameter> parameters, CancellationToken ct)
         {
             if (string.IsNullOrWhiteSpace(spName))
                 throw new ArgumentException("spName es requerido.", nameof(spName));
 
-            await using var cn = _cnFactory.CreateConnection();
+            await using var cn = (SqlConnection)_cnFactory.CreateConnection();
             await cn.OpenAsync(ct);
 
             await using var cmd = new SqlCommand(spName, cn)
@@ -114,19 +123,75 @@ namespace Sincro_Sap_Gosocket.Infraestructura.Sql
                 CommandTimeout = 120
             };
 
-            // Ajusta el nombre del parámetro al real de tu SP: @DocEntry o @docEntry
-            cmd.Parameters.Add(new SqlParameter("@DocEntry", SqlDbType.Int) { Value = docEntry });
+            if (parameters != null)
+            {
+                foreach (var param in parameters)
+                {
+                    cmd.Parameters.Add(param);
+                }
+            }
 
-            // Caso común: el SP devuelve 1 fila con 1 columna (XML/JSON)
-            // Si tu SP devuelve muchas columnas/filas, cambia esta lectura.
-            await using var rd = await cmd.ExecuteReaderAsync(ct);
+            var result = await cmd.ExecuteScalarAsync(ct);
+            return result == null || result == DBNull.Value ? string.Empty : result.ToString();
+        }
 
-            if (!await rd.ReadAsync(ct))
-                throw new InvalidOperationException($"El SP {spName} no devolvió datos para DocEntry={docEntry}.");
+        public async Task<DataTable> EjecutarDataTableAsync(string spName, IEnumerable<SqlParameter> parameters, CancellationToken ct)
+        {
+            if (string.IsNullOrWhiteSpace(spName))
+                throw new ArgumentException("spName es requerido.", nameof(spName));
 
-            // Si la primera columna es NVARCHAR(MAX)/XML/JSON:
-            var value = rd.GetValue(0);
-            return value == DBNull.Value ? "" : value;
+            await using var cn = (SqlConnection)_cnFactory.CreateConnection();
+            await cn.OpenAsync(ct);
+
+            await using var cmd = new SqlCommand(spName, cn)
+            {
+                CommandType = CommandType.StoredProcedure,
+                CommandTimeout = 120
+            };
+
+            if (parameters != null)
+            {
+                foreach (var param in parameters)
+                {
+                    cmd.Parameters.Add(param);
+                }
+            }
+
+            await using var reader = await cmd.ExecuteReaderAsync(ct);
+            var dataTable = new DataTable();
+            dataTable.Load(reader);
+            return dataTable;
+        }
+
+        public async Task<object> EjecutarValorUnicoAsync(string spName, IEnumerable<SqlParameter> parameters, CancellationToken ct)
+        {
+            if (string.IsNullOrWhiteSpace(spName))
+                throw new ArgumentException("spName es requerido.", nameof(spName));
+
+            await using var cn = (SqlConnection)_cnFactory.CreateConnection();
+            await cn.OpenAsync(ct);
+
+            await using var cmd = new SqlCommand(spName, cn)
+            {
+                CommandType = CommandType.StoredProcedure,
+                CommandTimeout = 120
+            };
+
+            if (parameters != null)
+            {
+                foreach (var param in parameters)
+                {
+                    cmd.Parameters.Add(param);
+                }
+            }
+
+            await using var reader = await cmd.ExecuteReaderAsync(ct);
+
+            if (!await reader.ReadAsync(ct))
+                throw new InvalidOperationException($"El SP {spName} no devolvió datos.");
+
+            var value = reader.GetValue(0);
+            return value == DBNull.Value ? null : value;
         }
     }
 }
