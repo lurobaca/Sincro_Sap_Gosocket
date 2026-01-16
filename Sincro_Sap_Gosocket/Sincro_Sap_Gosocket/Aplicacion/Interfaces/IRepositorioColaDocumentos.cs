@@ -12,13 +12,16 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Interfaces
     public class DocumentoCola
     {
         public long DocumentosPendientes_Id { get; set; }
+        public string SourceSystem { get; set; }
+        public string TipoCE { get; set; }
         public string ObjType { get; set; }
         public int DocEntry { get; set; }
         public int? DocNum { get; set; }
         public string DocSubType { get; set; }
         public string DocType { get; set; }
-        public string CandCode { get; set; }
-        public string IsoRule { get; set; }
+        public string CardCode { get; set; }
+         public string TaxDate { get; set; } 
+         public DateTime? CreateDateTime { get; set; }
         public string Status { get; set; }
         public int AttemptCount { get; set; }
         public DateTime? NextAttemptAt { get; set; }
@@ -28,12 +31,12 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Interfaces
         public string LastError { get; set; }
 
         // Propiedades adicionales del documento
-        public string TipoCE { get; set; }
+     
         public string SituacionDeComprobante { get; set; }
         public string Remitente { get; set; }
         public string Receptor { get; set; }
         public int? Folio { get; set; }
-        public string FirmaDigital { get; set; }
+     
         public DateTime FechaCreacion { get; set; }
     }
 }

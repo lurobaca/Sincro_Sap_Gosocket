@@ -53,7 +53,9 @@ namespace Sincro_Sap_Gosocket.Configuracion
         public string Password { get; set; } = string.Empty;
 
         // ========== PROPIEDADES CALCULADAS ==========
-
+        public string OutputPath { get; set; } = "";
+        public bool CrearSubcarpetaPorTipo { get; set; }
+        public bool CrearSubcarpetaPorFecha { get; set; }
         /// <summary>
         /// Indica si la configuración está preparada para usar OAuth 2.0
         /// </summary>
@@ -74,7 +76,8 @@ namespace Sincro_Sap_Gosocket.Configuracion
         /// <summary>
         /// Valida que la configuración mínima esté presente
         /// </summary>
-        public void ValidarConfiguracion()
+   
+        public void ValidarConfiguracion(bool exigirOutputPath = false)
         {
             if (!UsarOAuth && !UsarBasicAuth)
             {
@@ -96,6 +99,9 @@ namespace Sincro_Sap_Gosocket.Configuracion
 
             if (UsarBasicAuth && !Uri.TryCreate(ApiUrl, UriKind.Absolute, out _))
                 throw new InvalidOperationException($"ApiUrl no es una URL válida: {ApiUrl}");
+
+            if (exigirOutputPath && string.IsNullOrWhiteSpace(OutputPath))
+                throw new InvalidOperationException("OutputPath es obligatorio pero no está configurado (GoSocket:OutputPath).");
         }
     }
 }
