@@ -1,174 +1,127 @@
-﻿using System;
-using System.Data;
-using System.Text.Json;
+﻿// Infraestructura/Sql/RepositorioEstadosSql.cs
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Logging;
 using Sincro_Sap_Gosocket.Aplicacion.Interfaces;
 
 namespace Sincro_Sap_Gosocket.Infraestructura.Sql
 {
-    public sealed class RepositorioEstadosSql : IRepositorioEstados
+    public class RepositorioEstadosSql : IRepositorioEstados
     {
+        private const string Tabla = "[SincroSapGoSocket].[Integration].[DocumentosPendientes]";
+
         private readonly ISqlConnectionFactory _cnFactory;
+        private readonly ILogger<RepositorioEstadosSql> _logger;
 
-        // Nombres corregidos según tus stored procedures
-        private const string SP_DONE = "Integration.MarkDone";
-        private const string SP_RETRY_FAIL = "Integration.MarkFailed";
-
-        public RepositorioEstadosSql(ISqlConnectionFactory cnFactory)
+        public RepositorioEstadosSql(ISqlConnectionFactory cnFactory, ILogger<RepositorioEstadosSql> logger)
         {
             _cnFactory = cnFactory ?? throw new ArgumentNullException(nameof(cnFactory));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
-        public async Task MarcarDoneAsync(long queueId, object resultado, CancellationToken ct)
+        public async Task MarcarDoneAsync(long documentosPendientesId, CancellationToken ct)
         {
-            if (resultado == null)
-                throw new ArgumentNullException(nameof(resultado));
+            var sql = $@"
+UPDATE {Tabla}
+SET
+    Status = 'DONE',
+    LockedBy = NULL,
+    LockedAt = NULL,
+    NextAttemptAt = NULL
+WHERE DocumentosPendientes_Id = @Id;";
 
-            // Serializar el resultado si es necesario
-            string? respTxt = null;
+            await EjecutarAsync(sql, documentosPendientesId, ct);
+        }
 
-            if (resultado is string strResult)
-            {
-                respTxt = strResult;
-            }
-            else
-            {
-                try
-                {
-                    respTxt = JsonSerializer.Serialize(resultado);
-                }
-                catch
-                {
-                    respTxt = resultado.ToString();
-                }
-            }
+        public async Task MarcarRetryOFalloAsync(long documentosPendientesId, string lastError, int attemptCount, CancellationToken ct)
+        {
+            // Regla típica: si ya reintentó mucho => FAIL, si no => RETRY
+            var nuevoStatus = attemptCount >= 5 ? "FAIL" : "RETRY";
 
-            await using var cn = (SqlConnection)_cnFactory.CreateConnection();
-            await cn.OpenAsync(ct);
+            var sql = $@"
+UPDATE {Tabla}
+SET
+    Status = @Status,
+    LastError = @LastError,
+    AttemptCount = @AttemptCount,
+    LastAttemptAt = SYSUTCDATETIME(),
+    NextAttemptAt = DATEADD(MINUTE, 5, SYSUTCDATETIME()),
+    LockedBy = NULL,
+    LockedAt = NULL
+WHERE DocumentosPendientes_Id = @Id;";
 
-            await using var cmd = new SqlCommand(SP_DONE, cn)
-            {
-                CommandType = CommandType.StoredProcedure
-            };
+            using var cn = await _cnFactory.CreateOpenConnectionAsync(ct);
+            using var cmd = new SqlCommand(sql, cn);
 
-            // Parámetro según tu stored procedure MarkDone
-            cmd.Parameters.Add(new SqlParameter("@QueueId", SqlDbType.BigInt)
-            {
-                Value = queueId
-            });
-
-            // NOTA: El SP MarkDone que me mostraste solo recibe @QueueId
-            // Si necesitas guardar la respuesta, deberías modificar el SP
-            // o usar otro campo. Por ahora solo ejecutamos con el QueueId.
-            // Si tu tabla tiene un campo para la respuesta, deberías añadir:
-            // cmd.Parameters.Add(new SqlParameter("@ResponseData", SqlDbType.NVarChar, -1)
-            // {
-            //     Value = (object?)respTxt ?? DBNull.Value
-            // });
+            cmd.Parameters.AddWithValue("@Id", documentosPendientesId);
+            cmd.Parameters.AddWithValue("@Status", nuevoStatus);
+            cmd.Parameters.AddWithValue("@LastError", (object?)lastError ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@AttemptCount", attemptCount);
 
             await cmd.ExecuteNonQueryAsync(ct);
         }
 
-        public async Task MarcarRetryOFalloAsync(long queueId, string detalleError, CancellationToken ct)
+        public async Task MarcarWaitingHaciendaAsync(long documentosPendientesId, string? goSocketTrackId, int? httpStatus, string? responseJson, CancellationToken ct)
         {
-            if (string.IsNullOrWhiteSpace(detalleError))
-                throw new ArgumentException("Detalle del error es requerido.", nameof(detalleError));
+            var sql = $@"
+UPDATE {Tabla}
+SET
+    Status = 'WAITING_HACIENDA',
+    GoSocket_TrackId = @TrackId,
+    GoSocket_HttpStatus = @HttpStatus,
+    GoSocket_ResponseJson = @Resp,
+    LastAttemptAt = SYSUTCDATETIME(),
+    LockedBy = NULL,
+    LockedAt = NULL
+WHERE DocumentosPendientes_Id = @Id;";
 
-            await using var cn = (SqlConnection)_cnFactory.CreateConnection();
-            await cn.OpenAsync(ct);
+            using var cn = await _cnFactory.CreateOpenConnectionAsync(ct);
+            using var cmd = new SqlCommand(sql, cn);
 
-            await using var cmd = new SqlCommand(SP_RETRY_FAIL, cn)
-            {
-                CommandType = CommandType.StoredProcedure
-            };
-
-            // Parámetros según tu stored procedure MarkFailed
-            cmd.Parameters.Add(new SqlParameter("@QueueId", SqlDbType.BigInt)
-            {
-                Value = queueId
-            });
-
-            cmd.Parameters.Add(new SqlParameter("@Error", SqlDbType.NVarChar, 2000)
-            {
-                Value = detalleError.Length > 2000 ? detalleError.Substring(0, 2000) : detalleError
-            });
-
-            // Valores por defecto según tu SP
-            cmd.Parameters.Add(new SqlParameter("@RetryInSeconds", SqlDbType.Int)
-            {
-                Value = 60 // Valor por defecto
-            });
-
-            cmd.Parameters.Add(new SqlParameter("@MaxAttempts", SqlDbType.Int)
-            {
-                Value = 10 // Valor por defecto
-            });
+            cmd.Parameters.AddWithValue("@Id", documentosPendientesId);
+            cmd.Parameters.AddWithValue("@TrackId", (object?)goSocketTrackId ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@HttpStatus", (object?)httpStatus ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@Resp", (object?)responseJson ?? DBNull.Value);
 
             await cmd.ExecuteNonQueryAsync(ct);
         }
 
-        // Método opcional para obtener documentos pendientes
-        public async Task<DataTable> ObtenerClaimPendientesAsync(string workerId, int batchSize, CancellationToken ct)
+        public async Task ActualizarSeguimientoHaciendaAsync(long documentosPendientesId, string? haciendaEstado, string? haciendaResponseJson, bool done, int attemptCount, CancellationToken ct)
         {
-            const string SP_CLAIM_PENDIENTES = "Integration.ClaimPendientes";
+            var statusFinal = done ? "DONE" : "WAITING_HACIENDA";
 
-            await using var cn = (SqlConnection)_cnFactory.CreateConnection();
-            await cn.OpenAsync(ct);
+            var sql = $@"
+UPDATE {Tabla}
+SET
+    Hacienda_Estado = @Estado,
+    Hacienda_ResponseJson = @Resp,
+    Status = @Status,
+    AttemptCount = @AttemptCount,
+    LastAttemptAt = SYSUTCDATETIME(),
+    NextAttemptAt = CASE WHEN @Status = 'WAITING_HACIENDA' THEN DATEADD(MINUTE, 5, SYSUTCDATETIME()) ELSE NULL END,
+    LockedBy = NULL,
+    LockedAt = NULL
+WHERE DocumentosPendientes_Id = @Id;";
 
-            await using var cmd = new SqlCommand(SP_CLAIM_PENDIENTES, cn)
-            {
-                CommandType = CommandType.StoredProcedure
-            };
+            using var cn = await _cnFactory.CreateOpenConnectionAsync(ct);
+            using var cmd = new SqlCommand(sql, cn);
 
-            cmd.Parameters.Add(new SqlParameter("@WorkerId", SqlDbType.VarChar, 100)
-            {
-                Value = workerId
-            });
+            cmd.Parameters.AddWithValue("@Id", documentosPendientesId);
+            cmd.Parameters.AddWithValue("@Estado", (object?)haciendaEstado ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@Resp", (object?)haciendaResponseJson ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@Status", statusFinal);
+            cmd.Parameters.AddWithValue("@AttemptCount", attemptCount);
 
-            cmd.Parameters.Add(new SqlParameter("@BatchSize", SqlDbType.Int)
-            {
-                Value = batchSize
-            });
-
-            await using var reader = await cmd.ExecuteReaderAsync(ct);
-            var dataTable = new DataTable();
-            dataTable.Load(reader);
-            return dataTable;
+            await cmd.ExecuteNonQueryAsync(ct);
         }
 
-        // Método opcional para manejo más flexible de reintentos
-        public async Task MarcarParaReintentoAsync(long queueId, string error, int retryInSeconds, int maxAttempts, CancellationToken ct)
+        private async Task EjecutarAsync(string sql, long id, CancellationToken ct)
         {
-            await using var cn = (SqlConnection)_cnFactory.CreateConnection();
-            await cn.OpenAsync(ct);
-
-            await using var cmd = new SqlCommand(SP_RETRY_FAIL, cn)
-            {
-                CommandType = CommandType.StoredProcedure
-            };
-
-            cmd.Parameters.Add(new SqlParameter("@QueueId", SqlDbType.BigInt)
-            {
-                Value = queueId
-            });
-
-            cmd.Parameters.Add(new SqlParameter("@Error", SqlDbType.NVarChar, 2000)
-            {
-                Value = error.Length > 2000 ? error.Substring(0, 2000) : error
-            });
-
-            cmd.Parameters.Add(new SqlParameter("@RetryInSeconds", SqlDbType.Int)
-            {
-                Value = retryInSeconds
-            });
-
-            cmd.Parameters.Add(new SqlParameter("@MaxAttempts", SqlDbType.Int)
-            {
-                Value = maxAttempts
-            });
-
+            using var cn = await _cnFactory.CreateOpenConnectionAsync(ct);
+            using var cmd = new SqlCommand(sql, cn);
+            cmd.Parameters.AddWithValue("@Id", id);
             await cmd.ExecuteNonQueryAsync(ct);
         }
     }

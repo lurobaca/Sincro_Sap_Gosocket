@@ -1,6 +1,4 @@
-using System;
-using System.IO;
-using System.Net.Http.Headers;
+// Sincro_Sap_Gosocket/Program.cs
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
@@ -9,9 +7,14 @@ using Serilog.Events;
 using Sincro_Sap_Gosocket.Aplicacion.Interfaces;
 using Sincro_Sap_Gosocket.Aplicacion.Servicios;
 using Sincro_Sap_Gosocket.Configuracion;
-using Sincro_Sap_Gosocket.Infraestructura;
+using Sincro_Sap_Gosocket.Configuracion.OpcionesSql;
+using Sincro_Sap_Gosocket.Infraestructura.Gosocket;
 using Sincro_Sap_Gosocket.Infraestructura.Sql;
 using Sincro_Sap_Gosocket.Options;
+using System;
+using System.IO;
+using System.Linq.Expressions;
+using System.Net.Http.Headers;
 
 namespace Sincro_Sap_Gosocket
 {
@@ -44,6 +47,7 @@ namespace Sincro_Sap_Gosocket
                 "logs");
 
             Directory.CreateDirectory(logDir);
+
             var logFile = Path.Combine(logDir, "Sincro_Sap_Gosocket-.log");
 
             Log.Logger = new LoggerConfiguration()
@@ -80,40 +84,44 @@ namespace Sincro_Sap_Gosocket
 
         private static void ConfigurarServicios(HostBuilderContext context, IServiceCollection services)
         {
-            // ========== SECCIÓN 1: REGISTRO DE CONFIGURACIONES ==========
+            // 1) Options / Config
             RegistrarConfiguraciones(context, services);
 
-            // ========== SECCIÓN 2: VALIDACIÓN DE CONFIGURACIÓN CRÍTICA ==========
+            // 2) Validaciones críticas (falla rápido al iniciar)
             ValidarConfiguracionInicial(context);
 
-            // ========== SECCIÓN 3: INFRAESTRUCTURA - BASE DE DATOS ==========
+            // 3) SQL
             RegistrarInfraestructuraSql(context, services);
 
-            // ========== SECCIÓN 4: SERVICIOS DE APLICACIÓN ==========
+            // 4) Servicios de aplicación
             RegistrarServiciosAplicacion(services);
 
-            // ========== SECCIÓN 5: INTEGRACIÓN GOSOCKET API ==========
+            // 5) GoSocket (Basic Auth)
             RegistrarServiciosGoSocket(services);
 
-            // ========== SECCIÓN 6: WORKER / BACKGROUND SERVICE ==========
+            // 6) Worker
             services.AddHostedService<Worker>();
         }
 
         private static void RegistrarConfiguraciones(HostBuilderContext context, IServiceCollection services)
         {
+            // GoSocket: Basic Auth (ApiBaseUrl + ApiKey + Password)
             services.Configure<OpcionesGosocket>(context.Configuration.GetSection("GoSocket"));
+
             services.Configure<OpcionesServicio>(context.Configuration.GetSection("ServiceOptions"));
+
+            // Nota: igual usamos GetConnectionString("Sql"), esto solo deja disponible el bind si usted lo usa en otros lados.
             services.Configure<OpcionesSql>(context.Configuration.GetSection("ConnectionStrings"));
         }
 
         private static void ValidarConfiguracionInicial(HostBuilderContext context)
         {
+            // SQL
             var connectionString = context.Configuration.GetConnectionString("Sql");
             if (string.IsNullOrWhiteSpace(connectionString))
-            {
                 throw new InvalidOperationException("Falta ConnectionStrings:Sql en appsettings.json");
-            }
 
+            // GoSocket (Basic)
             var opcionesGosocket = context.Configuration.GetSection("GoSocket").Get<OpcionesGosocket>();
             if (opcionesGosocket == null)
             {
@@ -123,23 +131,24 @@ namespace Sincro_Sap_Gosocket
 
             try
             {
-                opcionesGosocket.ValidarConfiguracion();
-                Log.Information("Configuración GoSocket validada correctamente");
+                opcionesGosocket.ValidarConfiguracion(exigirOutputPath: false);
+                Log.Information("Configuración GoSocket (Basic Auth) validada correctamente");
             }
             catch (Exception ex)
             {
-                Log.Fatal(ex, "Error en configuración de GoSocket");
+                Log.Fatal(ex, "Error en configuración de GoSocket (Basic Auth)");
                 throw;
             }
         }
 
         private static void RegistrarInfraestructuraSql(HostBuilderContext context, IServiceCollection services)
         {
-            var connectionString = context.Configuration.GetConnectionString("Sql");
+            
+            IOptions<OpcionesSql> opcionesSql = services.BuildServiceProvider().GetRequiredService<IOptions<OpcionesSql>>();
+            opcionesSql.Value.ConnectionString  = context.Configuration.GetConnectionString("Sql"); ;
 
-            services.AddScoped<ISqlConnectionFactory>(_ => new SqlConnectionFactory(connectionString));
+            services.AddScoped<ISqlConnectionFactory>(_ => new SqlConnectionFactory(opcionesSql));
 
-            // Repositorios SQL
             services.AddScoped<IRepositorioColaDocumentos, RepositorioColaDocumentosSql>();
             services.AddScoped<IRepositorioEstados, RepositorioEstadosSql>();
             services.AddScoped<IEjecutorProcedimientos, EjecutorProcedimientosSql>();
@@ -153,36 +162,29 @@ namespace Sincro_Sap_Gosocket
 
         private static void RegistrarServiciosGoSocket(IServiceCollection services)
         {
-            // HttpClient para Servicio de Autenticación (OAuth 2.0)
-            services.AddHttpClient<IServicioAutenticacion, ServicioAutenticacion>((serviceProvider, httpClient) =>
+            // Servicio de autenticación: construye Authorization: Basic {base64(ApiKey:Password)}
+            // No necesita HttpClient.
+            services.AddSingleton<IServicioAutenticacion, ServicioAutenticacion>();
+
+            // Cliente HTTP principal (API v1)
+            services.AddHttpClient<IClienteGosocket, ClienteGosocket>((sp, httpClient) =>
             {
-                // Este HttpClient es específico para obtener tokens OAuth
-                httpClient.Timeout = TimeSpan.FromSeconds(30);
-                httpClient.DefaultRequestHeaders.Accept.Clear();
-                httpClient.DefaultRequestHeaders.Accept.Add(
-                    new MediaTypeWithQualityHeaderValue("application/json"));
-            });
+                var opciones = sp.GetRequiredService<IOptions<OpcionesGosocket>>().Value;
+                opciones.ValidarConfiguracion(exigirOutputPath: false);
 
-            // HttpClient para Cliente Principal de GoSocket
-            services.AddHttpClient<IClienteGosocket, ClienteGosocket>((serviceProvider, httpClient) =>
-            {
-                var opciones = serviceProvider.GetRequiredService<IOptions<OpcionesGosocket>>().Value;
+                // Importante: ApiBaseUrl debe apuntar a /api/v1/ (según manual).
+                var baseUrl = opciones.ApiBaseUrl.EndsWith("/") ? opciones.ApiBaseUrl : opciones.ApiBaseUrl + "/";
+                httpClient.BaseAddress = new Uri(baseUrl);
 
-                if (!opciones.UsarOAuth)
-                {
-                    throw new InvalidOperationException(
-                        "La configuración de GoSocket no es válida para OAuth 2.0. " +
-                        "Revise las propiedades ClientId, ClientSecret, OAuthTokenUrl y ApiBaseUrl.");
-                }
-
-                // Configuración base del HttpClient para el cliente principal
-                httpClient.BaseAddress = new Uri(opciones.ApiBaseUrl);
-                httpClient.DefaultRequestHeaders.Accept.Clear();
-                httpClient.DefaultRequestHeaders.Accept.Add(
-                    new MediaTypeWithQualityHeaderValue("application/json"));
                 httpClient.Timeout = TimeSpan.FromSeconds(120);
 
-                // Headers adicionales para trazabilidad
+                httpClient.DefaultRequestHeaders.Accept.Clear();
+                httpClient.DefaultRequestHeaders.Accept.Add(
+                    new MediaTypeWithQualityHeaderValue("application/json"));
+
+                // Headers opcionales de trazabilidad
+                httpClient.DefaultRequestHeaders.Remove("X-Client-Version");
+                httpClient.DefaultRequestHeaders.Remove("X-Client-Name");
                 httpClient.DefaultRequestHeaders.Add("X-Client-Version", "1.0.0");
                 httpClient.DefaultRequestHeaders.Add("X-Client-Name", "SincroSapGoSocket");
             });

@@ -4,104 +4,54 @@ using System;
 namespace Sincro_Sap_Gosocket.Configuracion
 {
     /// <summary>
-    /// Configuración para la conexión con la API de GoSocket
-    /// Soportando tanto OAuth 2.0 como Basic Auth para compatibilidad
+    /// Configuración para consumir la API de GoSocket usando Basic Auth,
+    /// según Manual-API_Cliente.
     /// </summary>
-    public class OpcionesGosocket
+    public sealed class OpcionesGosocket
     {
-        // ========== CONFIGURACIÓN OAUTH 2.0 (RECOMENDADO) ==========
-
         /// <summary>
-        /// URL base para consumir los endpoints de la API (versión OAuth 2.0)
-        /// Ejemplo Sandbox: https://developers-sbx.gosocket.net/api/v2/
+        /// URL base del API (v1).
+        /// Ejemplo Sandbox: https://developers-sbx.gosocket.net/api/v1/
         /// </summary>
         public string ApiBaseUrl { get; set; } = string.Empty;
 
         /// <summary>
-        /// URL para obtener el token de acceso OAuth 2.0
-        /// Ejemplo Sandbox: https://developers-sbx.gosocket.net/oauth2/token
-        /// </summary>
-        public string OAuthTokenUrl { get; set; } = string.Empty;
-
-        /// <summary>
-        /// Client ID para autenticación OAuth 2.0 (grant_type: client_credentials)
-        /// Formato: UUID (ej: 6188048e-8989-4272-ac83-6d6e06cbc496)
-        /// </summary>
-        public string ClientId { get; set; } = string.Empty;
-
-        /// <summary>
-        /// Client Secret para autenticación OAuth 2.0 (grant_type: client_credentials)
-        /// </summary>
-        public string ClientSecret { get; set; } = string.Empty;
-
-        // ========== CONFIGURACIÓN BASIC AUTH (LEGACY) ==========
-
-        /// <summary>
-        /// URL base para autenticación Basic (legacy)
-        /// Mantenido por compatibilidad con configuraciones existentes
-        /// </summary>
-        public string ApiUrl { get; set; } = string.Empty;
-
-        /// <summary>
-        /// API Key/Username para autenticación Basic (legacy)
+        /// ApiKey (usuario) mostrado en el portal GoSocket como "Usuario" (Basic/Basic Auth).
         /// </summary>
         public string ApiKey { get; set; } = string.Empty;
 
         /// <summary>
-        /// Password para autenticación Basic (legacy)
+        /// Password mostrado en el portal GoSocket como "Contraseña" (Basic/Basic Auth).
         /// </summary>
-        public string Password { get; set; } = string.Empty;
+        public string ApiPassword { get; set; } = string.Empty;
 
-        // ========== PROPIEDADES CALCULADAS ==========
-        public string OutputPath { get; set; } = "";
+        /// <summary>
+        /// Ruta de salida para archivos (si aplica en su flujo).
+        /// </summary>
+        public string OutputPath { get; set; } = string.Empty;
+
         public bool CrearSubcarpetaPorTipo { get; set; }
         public bool CrearSubcarpetaPorFecha { get; set; }
-        /// <summary>
-        /// Indica si la configuración está preparada para usar OAuth 2.0
-        /// </summary>
-        public bool UsarOAuth =>
-            !string.IsNullOrWhiteSpace(OAuthTokenUrl)
-            && !string.IsNullOrWhiteSpace(ApiBaseUrl)
-            && !string.IsNullOrWhiteSpace(ClientId)
-            && !string.IsNullOrWhiteSpace(ClientSecret);
 
         /// <summary>
-        /// Indica si la configuración está preparada para usar Basic Auth
+        /// Valida la configuración mínima necesaria para operar.
         /// </summary>
-        public bool UsarBasicAuth =>
-            !string.IsNullOrWhiteSpace(ApiUrl)
-            && !string.IsNullOrWhiteSpace(ApiKey)
-            && !string.IsNullOrWhiteSpace(Password);
-
-        /// <summary>
-        /// Valida que la configuración mínima esté presente
-        /// </summary>
-   
         public void ValidarConfiguracion(bool exigirOutputPath = false)
         {
-            if (!UsarOAuth && !UsarBasicAuth)
-            {
-                throw new InvalidOperationException(
-                    "La configuración de GoSocket no está completa. " +
-                    "Configure OAuth 2.0 (ApiBaseUrl, OAuthTokenUrl, ClientId, ClientSecret) " +
-                    "o Basic Auth (ApiUrl, ApiKey, Password)."
-                );
-            }
+            if (string.IsNullOrWhiteSpace(ApiBaseUrl))
+                throw new InvalidOperationException("GoSocket:ApiBaseUrl es obligatorio.");
 
-            if (UsarOAuth)
-            {
-                if (!Uri.TryCreate(ApiBaseUrl, UriKind.Absolute, out _))
-                    throw new InvalidOperationException($"ApiBaseUrl no es una URL válida: {ApiBaseUrl}");
+            if (!Uri.TryCreate(ApiBaseUrl, UriKind.Absolute, out _))
+                throw new InvalidOperationException($"GoSocket:ApiBaseUrl no es una URL válida: {ApiBaseUrl}");
 
-                if (!Uri.TryCreate(OAuthTokenUrl, UriKind.Absolute, out _))
-                    throw new InvalidOperationException($"OAuthTokenUrl no es una URL válida: {OAuthTokenUrl}");
-            }
+            if (string.IsNullOrWhiteSpace(ApiKey))
+                throw new InvalidOperationException("GoSocket:ApiKey es obligatorio (Usuario Basic).");
 
-            if (UsarBasicAuth && !Uri.TryCreate(ApiUrl, UriKind.Absolute, out _))
-                throw new InvalidOperationException($"ApiUrl no es una URL válida: {ApiUrl}");
+            if (string.IsNullOrWhiteSpace(ApiPassword))
+                throw new InvalidOperationException("GoSocket:ApiPassword es obligatorio (Contraseña Basic).");
 
             if (exigirOutputPath && string.IsNullOrWhiteSpace(OutputPath))
-                throw new InvalidOperationException("OutputPath es obligatorio pero no está configurado (GoSocket:OutputPath).");
+                throw new InvalidOperationException("GoSocket:OutputPath es obligatorio pero no está configurado.");
         }
     }
 }

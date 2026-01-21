@@ -1,46 +1,48 @@
+// Sincro_Sap_Gosocket/Worker.cs
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Sincro_Sap_Gosocket.Aplicacion.Interfaces;
 using Sincro_Sap_Gosocket.Configuracion;
+using System;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Sincro_Sap_Gosocket
 {
     public class Worker : BackgroundService
     {
         private readonly ILogger<Worker> _logger;
-        private readonly IServiceScopeFactory _scopeFactory;
-        private readonly IOptions<OpcionesServicio> _opt;
+        private readonly IServicioProcesamientoDocumentos _servicioProcesamiento;
+        private readonly OpcionesServicio _opciones;
 
         public Worker(
             ILogger<Worker> logger,
-            IServiceScopeFactory scopeFactory,
-            IOptions<OpcionesServicio> opt)
+            IServicioProcesamientoDocumentos servicioProcesamiento,
+            IOptions<OpcionesServicio> opcionesServicio)
         {
             _logger = logger;
-            _scopeFactory = scopeFactory;
-            _opt = opt;
+            _servicioProcesamiento = servicioProcesamiento;
+            _opciones = opcionesServicio.Value;
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            var pollSeconds = Math.Max(1, _opt.Value.PollSeconds);
-            var batchSize = Math.Max(1, _opt.Value.BatchSize);
+            var pollSeconds = Math.Max(1, _opciones.PollSeconds);
+            var batchSize = Math.Max(1, _opciones.BatchSize);
 
-            _logger.LogInformation("Worker iniciado. PollSeconds={PollSeconds}, BatchSize={BatchSize}", pollSeconds, batchSize);
-
-            using var timer = new PeriodicTimer(TimeSpan.FromSeconds(pollSeconds));
+            _logger.LogInformation("Worker iniciado. PollSeconds={PollSeconds}s BatchSize={BatchSize}",
+                pollSeconds, batchSize);
 
             while (!stoppingToken.IsCancellationRequested)
             {
                 try
                 {
-                    await timer.WaitForNextTickAsync(stoppingToken);
+                    // 1) Enviar pendientes (PENDING/RETRY)
+                    await _servicioProcesamiento.ProcesarPendientesAsync(batchSize, stoppingToken);
 
-                    using var scope = _scopeFactory.CreateScope();
-                    var svc = scope.ServiceProvider.GetRequiredService<IServicioProcesamientoDocumentos>();
-
-                    await svc.ProcesarPendientesAsync(batchSize, stoppingToken);
+                    // 2) Consultar seguimiento Hacienda (WAITING_HACIENDA)
+                    await _servicioProcesamiento.ProcesarSeguimientoHaciendaAsync(batchSize, stoppingToken);
                 }
                 catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
                 {
@@ -48,8 +50,10 @@ namespace Sincro_Sap_Gosocket
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Error en ciclo del Worker. Se reintentará en el siguiente tick.");
+                    _logger.LogError(ex, "Error general en ciclo del Worker.");
                 }
+
+                await Task.Delay(TimeSpan.FromSeconds(pollSeconds), stoppingToken);
             }
 
             _logger.LogInformation("Worker detenido.");

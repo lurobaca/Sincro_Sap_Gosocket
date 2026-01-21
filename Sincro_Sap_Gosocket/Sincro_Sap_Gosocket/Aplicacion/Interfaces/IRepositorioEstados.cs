@@ -5,7 +5,12 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Interfaces
 {
     public interface IRepositorioEstados
     {
-        Task MarcarDoneAsync(long queueId, object resultado, CancellationToken ct);
-        Task MarcarRetryOFalloAsync(long queueId, string detalleError, CancellationToken ct);
+        Task MarcarDoneAsync(long documentosPendientesId, CancellationToken ct);
+
+        Task MarcarRetryOFalloAsync(long documentosPendientesId, string ultimoError, int maxIntentos, CancellationToken ct);
+
+        Task MarcarWaitingHaciendaAsync(long documentosPendientesId, string? gosocketTrackId, int? gosocketHttpStatus, string gosocketResponseJson, CancellationToken ct);
+
+        Task ActualizarSeguimientoHaciendaAsync(long documentosPendientesId, string? haciendaEstado, string? haciendaResponseJson, bool esFinal, int maxIntentos, CancellationToken ct);
     }
 }

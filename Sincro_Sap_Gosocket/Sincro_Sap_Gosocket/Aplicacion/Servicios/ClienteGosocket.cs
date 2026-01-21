@@ -1,380 +1,229 @@
-﻿// Sincro_Sap_Gosocket/Aplicacion/Servicios/ClienteGosocket.cs
+﻿// Infraestructura/Gosocket/ClienteGosocket.cs
+using System;
+using System.Collections.Generic;
+using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Text;
+using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Serialization;
 using Sincro_Sap_Gosocket.Aplicacion.Interfaces;
 using Sincro_Sap_Gosocket.Configuracion;
 using Sincro_Sap_Gosocket.Infraestructura.Gosocket.Dtos.Comun;
 using Sincro_Sap_Gosocket.Infraestructura.Gosocket.Dtos.Peticiones;
 using Sincro_Sap_Gosocket.Infraestructura.Gosocket.Dtos.Respuestas;
 using Sincro_Sap_Gosocket.Infraestructura.Gosocket.Excepciones;
-using System.Net.Http.Headers;
-using System.Text;
-using System.Xml;
 
-namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
+namespace Sincro_Sap_Gosocket.Infraestructura.Gosocket
 {
     /// <summary>
-    /// Implementación del cliente GoSocket API
-    /// Diseñado con principios SOLID y Clean Code
+    /// Cliente HTTP para consumir GoSocket según Manual-API_Cliente:
+    /// autenticación Basic Auth (ApiKey/Password).
     /// </summary>
     public class ClienteGosocket : IClienteGosocket
     {
         private readonly HttpClient _httpClient;
-        private readonly IServicioAutenticacion _servicioAutenticacion;
-        private readonly OpcionesGosocket _opciones;
         private readonly ILogger<ClienteGosocket> _logger;
-        private readonly JsonSerializerSettings _configuracionJson;
+        private readonly OpcionesGosocket _opciones;
 
-        // Constantes para configuración
-        private const int TimeoutSegundos = 120;
-        private const int MaximoReintentosPeticion = 3;
-        private readonly TimeSpan TiempoEsperaEntreReintentos = TimeSpan.FromSeconds(2);
+        private readonly JsonSerializerOptions _jsonOptions = new()
+        {
+            PropertyNameCaseInsensitive = true
+        };
 
         public ClienteGosocket(
             HttpClient httpClient,
-            IServicioAutenticacion servicioAutenticacion,
-            IOptions<OpcionesGosocket> opciones,
-            ILogger<ClienteGosocket> logger)
+            ILogger<ClienteGosocket> logger,
+            IOptions<OpcionesGosocket> opciones)
         {
-            _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
-            _servicioAutenticacion = servicioAutenticacion ?? throw new ArgumentNullException(nameof(servicioAutenticacion));
-            _opciones = opciones?.Value ?? throw new ArgumentNullException(nameof(opciones));
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _httpClient = httpClient;
+            _logger = logger;
+            _opciones = opciones.Value;
 
-            // Configurar serialización JSON
-            _configuracionJson = new JsonSerializerSettings
-            {
-                ContractResolver = new CamelCasePropertyNamesContractResolver(),
-                NullValueHandling = NullValueHandling.Ignore,
-                DateFormatString = "yyyy-MM-ddTHH:mm:ss",
-                Formatting = Newtonsoft.Json.Formatting.None
-            };
+            _opciones.ValidarConfiguracion();
 
-            ConfigurarHttpClient();
-            ValidarConfiguracion();
-        }
-
-        private void ConfigurarHttpClient()
-        {
+            // BaseAddress para API (v1 según su documentación)
+            // Ej: https://developers-sbx.gosocket.net/api/v1/
             _httpClient.BaseAddress = new Uri(_opciones.ApiBaseUrl);
+
+            // Basic Auth: ApiKey como username + Password
+            var basic = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{_opciones.ApiKey}:{_opciones.ApiPassword}"));
+            _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", basic);
+
             _httpClient.DefaultRequestHeaders.Accept.Clear();
-            _httpClient.DefaultRequestHeaders.Accept.Add(
-                new MediaTypeWithQualityHeaderValue("application/json"));
-            _httpClient.Timeout = TimeSpan.FromSeconds(TimeoutSegundos);
-
-            // Headers adicionales recomendados
-            _httpClient.DefaultRequestHeaders.Add("User-Agent", "SincroSapGoSocket/1.0");
-            _httpClient.DefaultRequestHeaders.Add("Cache-Control", "no-cache");
+            _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
         }
 
-        private void ValidarConfiguracion()
+        public Task<RespuestaApi<RespuestaSendDocumentToAuthority>> EnviarDocumentoAutoridadAsync(
+            PeticionSendDocumentToAuthority peticion,
+            CancellationToken ct)
         {
-            if (!_opciones.UsarOAuth)
-            {
-                throw new InvalidOperationException(
-                    "El ClienteGosocket requiere configuración OAuth 2.0. " +
-                    "Verifique las propiedades en appsettings.json.");
-            }
+            return EjecutarPeticionAsync<RespuestaSendDocumentToAuthority>(
+                endpoint: "Document/SendDocumentToAuthority",
+                metodo: HttpMethod.Post,
+                body: peticion,
+                ct: ct);
         }
 
-        #region Implementación de Métodos de la API
-
-        public async Task<RespuestaApi<RespuestaGetAccount>> ConsultarCuentaAsync(PeticionGetAccount peticion)
+        public Task<RespuestaApi<RespuestaGetAccount>> ConsultarCuentaAsync(PeticionGetAccount peticion, CancellationToken ct)
         {
-            if (peticion == null)
-                throw new ArgumentNullException(nameof(peticion));
-
-            return await EjecutarPeticionAsync<RespuestaGetAccount>(
-                endpoint: "GetAccount",
-                metodoHttp: HttpMethod.Post,
-                cuerpoPeticion: peticion);
+            return EjecutarPeticionAsync<RespuestaGetAccount>(
+                endpoint: "Document/GetAccount",
+                metodo: HttpMethod.Post,
+                body: peticion,
+                ct: ct);
         }
 
-        public async Task<RespuestaApi<RespuestaGetDocument>> ObtenerDocumentoAsync(PeticionGetDocument peticion)
+        public Task<RespuestaApi<RespuestaGetDocument>> ObtenerDocumentoAsync(PeticionGetDocument peticion, CancellationToken ct)
         {
-            if (peticion == null)
-                throw new ArgumentNullException(nameof(peticion));
-
-            return await EjecutarPeticionAsync<RespuestaGetDocument>(
-                endpoint: "GetDocument",
-                metodoHttp: HttpMethod.Post,
-                cuerpoPeticion: peticion);
+            return EjecutarPeticionAsync<RespuestaGetDocument>(
+                endpoint: "Document/GetDocument",
+                metodo: HttpMethod.Post,
+                body: peticion,
+                ct: ct);
         }
 
-        public async Task<RespuestaApi<RespuestaSendDocumentToAuthority>> EnviarDocumentoAutoridadAsync(
-            PeticionSendDocumentToAuthority peticion)
+        public Task<RespuestaApi<RespuestaDownloadDocumentPdf>> DescargarPdfDocumentoAsync(PeticionDownloadDocumentPdf peticion, CancellationToken ct)
         {
-            if (peticion == null)
-                throw new ArgumentNullException(nameof(peticion));
-
-            return await EjecutarPeticionAsync<RespuestaSendDocumentToAuthority>(
-                endpoint: "SendDocumentToAuthority",
-                metodoHttp: HttpMethod.Post,
-                cuerpoPeticion: peticion);
+            return EjecutarPeticionAsync<RespuestaDownloadDocumentPdf>(
+                endpoint: "File/DownloadDocumentPdf",
+                metodo: HttpMethod.Get,
+                body: null,
+                ct: ct,
+                queryFromObject: peticion);
         }
 
-        public async Task<RespuestaApi<RespuestaSendDocumentToAuthority>> ValidarDocumentoAsync(
-            PeticionSendDocumentToAuthority peticion)
+        public Task<RespuestaApi<RespuestaDownloadDocumentXml>> DescargarXmlDocumentoAsync(PeticionDownloadDocumentXml peticion, CancellationToken ct)
         {
-            if (peticion == null)
-                throw new ArgumentNullException(nameof(peticion));
-
-            return await EjecutarPeticionAsync<RespuestaSendDocumentToAuthority>(
-                endpoint: "SendDocumentToValidate",
-                metodoHttp: HttpMethod.Post,
-                cuerpoPeticion: peticion);
+            return EjecutarPeticionAsync<RespuestaDownloadDocumentXml>(
+                endpoint: "File/DownloadDocumentXml",
+                metodo: HttpMethod.Get,
+                body: null,
+                ct: ct,
+                queryFromObject: peticion);
         }
 
-        public async Task<RespuestaApi<RespuestaDownloadDocumentXml>> DescargarXmlDocumentoAsync(
-            PeticionDownloadDocumentXml peticion)
+        public Task<RespuestaApi<object>> ObtenerDocumentosRecibidosAsync(object peticion, CancellationToken ct)
         {
-            if (peticion == null)
-                throw new ArgumentNullException(nameof(peticion));
-
-            return await EjecutarPeticionAsync<RespuestaDownloadDocumentXml>(
-                endpoint: "DownloadDocumentXml",
-                metodoHttp: HttpMethod.Post,
-                cuerpoPeticion: peticion);
+            return EjecutarPeticionGenericaAsync("Document/GetDocumentsReceived", HttpMethod.Post, peticion, ct);
         }
 
-        public async Task<RespuestaApi<RespuestaDownloadDocumentPdf>> DescargarPdfDocumentoAsync(
-            PeticionDownloadDocumentPdf peticion)
+        public Task<RespuestaApi<object>> ConfirmarDocumentosRecibidosAsync(object peticion, CancellationToken ct)
         {
-            if (peticion == null)
-                throw new ArgumentNullException(nameof(peticion));
-
-            return await EjecutarPeticionAsync<RespuestaDownloadDocumentPdf>(
-                endpoint: "DownloadDocumentPdf",
-                metodoHttp: HttpMethod.Post,
-                cuerpoPeticion: peticion);
+            return EjecutarPeticionGenericaAsync("Document/ConfirmDocumentsReceived", HttpMethod.Post, peticion, ct);
         }
 
-        // Métodos pendientes de implementación específica
-        public Task<RespuestaApi<object>> ObtenerDocumentosRecibidosAsync(object peticion)
+        public Task<RespuestaApi<object>> ConsultarEventosDocumentoAsync(object peticion, CancellationToken ct)
         {
-            throw new NotImplementedException("Implementación pendiente según el manual v10 página 131");
+            return EjecutarPeticionGenericaAsync("Document/GetDocumentEvents", HttpMethod.Post, peticion, ct);
         }
 
-        public Task<RespuestaApi<object>> ConfirmarDocumentosRecibidosAsync(object peticion)
+        public Task<RespuestaApi<object>> CambiarEstadoDocumentoAsync(object peticion, CancellationToken ct)
         {
-            throw new NotImplementedException("Implementación pendiente según el manual v10 página 137");
+            return EjecutarPeticionGenericaAsync("Document/ChangeDocumentStatus", HttpMethod.Post, peticion, ct);
         }
 
-        public Task<RespuestaApi<object>> ConsultarEventosDocumentoAsync(object peticion)
+        private async Task<RespuestaApi<object>> EjecutarPeticionGenericaAsync(
+            string endpoint,
+            HttpMethod metodo,
+            object? body,
+            CancellationToken ct)
         {
-            throw new NotImplementedException("Implementación pendiente según el manual v10 página 142");
+            var resultado = await EjecutarPeticionAsync<Dictionary<string, object>>(
+                endpoint: endpoint,
+                metodo: metodo,
+                body: body,
+                ct: ct);
+
+            if (!resultado.Exitoso)
+                return RespuestaApi<object>.CrearFallido(resultado.MensajeError, resultado.CodigoError);
+
+            return RespuestaApi<object>.CrearExitoso((object)resultado.Datos!);
         }
-
-        public Task<RespuestaApi<object>> CambiarEstadoDocumentoAsync(object peticion)
-        {
-            throw new NotImplementedException("Implementación pendiente según el manual v10 página 150");
-        }
-
-        #endregion
-
-        #region Método Genérico para Ejecutar Peticiones
 
         private async Task<RespuestaApi<T>> EjecutarPeticionAsync<T>(
             string endpoint,
-            HttpMethod metodoHttp,
-            object cuerpoPeticion = null) where T : class
+            HttpMethod metodo,
+            object? body,
+            CancellationToken ct,
+            object? queryFromObject = null)
+            where T : class
         {
-            var idCorrelacion = Guid.NewGuid();
-            var contextoLog = new { IdCorrelacion = idCorrelacion, Endpoint = endpoint };
-
             try
             {
-                _logger.LogDebug(
-                    "[{IdCorrelacion}] Iniciando petición {Metodo} {Endpoint}",
-                    idCorrelacion, metodoHttp, endpoint);
+                var requestUrl = endpoint;
 
-                // Ejecutar con reintentos
-                return await EjecutarPeticionConReintentosAsync<T>(
-                    endpoint, metodoHttp, cuerpoPeticion, idCorrelacion);
+                if (metodo == HttpMethod.Get && queryFromObject != null)
+                    requestUrl = endpoint + ConstruirQueryString(queryFromObject);
+
+                using var request = new HttpRequestMessage(metodo, requestUrl);
+
+                if (metodo != HttpMethod.Get && body != null)
+                {
+                    var json = JsonSerializer.Serialize(body, _jsonOptions);
+                    request.Content = new StringContent(json, Encoding.UTF8, "application/json");
+                }
+
+                using var response = await _httpClient.SendAsync(request, ct);
+                var raw = await response.Content.ReadAsStringAsync(ct);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    // Intentar parsear error estándar GoSocket
+                    var error = TryParse<RespuestaError>(raw);               
+
+                    var mensaje =
+                        error != null && (!string.IsNullOrWhiteSpace(error.Error) || !string.IsNullOrWhiteSpace(error.ErrorDescription))
+                            ? $"{error.Error}: {error.ErrorDescription}".Trim().Trim(':')
+                            : $"HTTP {(int)response.StatusCode} - {response.ReasonPhrase}";
+
+                    return RespuestaApi<T>.CrearFallido(mensaje, ((int)response.StatusCode).ToString());
+
+
+                    return RespuestaApi<T>.CrearFallido(mensaje, ((int)response.StatusCode).ToString());
+                }
+
+                var dto = TryParse<T>(raw);
+                if (dto == null)
+                    return RespuestaApi<T>.CrearFallido("No se pudo deserializar respuesta GoSocket.", "DESERIALIZE_ERROR");
+
+                return RespuestaApi<T>.CrearExitoso(dto);
             }
-            catch (GoSocketApiException ex)
+            catch (TaskCanceledException ex) when (!ct.IsCancellationRequested)
             {
-                _logger.LogError(ex,
-                    "[{IdCorrelacion}] Error específico de API en {Endpoint}: {Mensaje}",
-                    idCorrelacion, endpoint, ex.MensajeAmigable);
-
-                return RespuestaApi<T>.CrearFallido(
-                    mensajeError: ex.MensajeAmigable,
-                    codigoError: ex.CodigoError ?? "API_ERROR");
+                _logger.LogWarning(ex, "Timeout consumiendo GoSocket en endpoint {Endpoint}", endpoint);
+                return RespuestaApi<T>.CrearFallido("Timeout consumiendo GoSocket.", "TIMEOUT");
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex,
-                    "[{IdCorrelacion}] Error inesperado en {Endpoint}",
-                    idCorrelacion, endpoint);
-
-                return RespuestaApi<T>.CrearFallido(
-                    mensajeError: $"Error inesperado: {ex.Message}",
-                    codigoError: "UNEXPECTED_ERROR");
+                _logger.LogError(ex, "Error consumiendo GoSocket en endpoint {Endpoint}", endpoint);
+                throw new GoSocketApiException("Error consumiendo GoSocket.", ex);
             }
         }
 
-        private async Task<RespuestaApi<T>> EjecutarPeticionConReintentosAsync<T>(
-            string endpoint,
-            HttpMethod metodoHttp,
-            object cuerpoPeticion,
-            Guid idCorrelacion) where T : class
+        private string ConstruirQueryString(object obj)
         {
-            int intento = 0;
-            Exception ultimaExcepcion = null;
+            // Construcción simple: propiedades públicas => ?a=1&b=2
+            var props = obj.GetType().GetProperties();
+            var pairs = new List<string>();
 
-            while (intento < MaximoReintentosPeticion)
+            foreach (var p in props)
             {
-                intento++;
+                var value = p.GetValue(obj);
+                if (value == null) continue;
 
-                try
-                {
-                    // 1. Obtener token de acceso
-                    var tokenAcceso = await _servicioAutenticacion.ObtenerTokenDeAccesoAsync();
-
-                    // 2. Crear petición HTTP
-                    var peticionHttp = CrearPeticionHttp(endpoint, metodoHttp, cuerpoPeticion, tokenAcceso);
-
-                    // 3. Enviar petición
-                    _logger.LogDebug("[{IdCorrelacion}] Enviando petición (Intento {Intento})",
-                        idCorrelacion, intento);
-
-                    var respuesta = await _httpClient.SendAsync(peticionHttp);
-
-                    // 4. Procesar respuesta
-                    return await ProcesarRespuestaHttpAsync<T>(respuesta, idCorrelacion);
-                }
-                catch (HttpRequestException ex) when (intento < MaximoReintentosPeticion)
-                {
-                    ultimaExcepcion = ex;
-                    _logger.LogWarning(ex,
-                        "[{IdCorrelacion}] Error de red (Intento {Intento}). Reintentando...",
-                        idCorrelacion, intento);
-
-                    await Task.Delay(TiempoEsperaEntreReintentos * intento);
-                }
-                catch (UnauthorizedAccessException) when (intento < MaximoReintentosPeticion)
-                {
-                    // Token posiblemente expirado, limpiar caché y reintentar
-                    _logger.LogWarning(
-                        "[{IdCorrelacion}] Token no autorizado (Intento {Intento}). Renovando token...",
-                        idCorrelacion, intento);
-
-                    _servicioAutenticacion.LimpiarCacheToken();
-                    await Task.Delay(TiempoEsperaEntreReintentos);
-                }
+                pairs.Add($"{Uri.EscapeDataString(p.Name)}={Uri.EscapeDataString(value.ToString()!)}");
             }
 
-            _logger.LogError(ultimaExcepcion,
-                "[{IdCorrelacion}] Fallo después de {MaximoReintentos} intentos",
-                idCorrelacion, MaximoReintentosPeticion);
-
-            throw new GoSocketApiException(
-                $"Fallo después de {MaximoReintentosPeticion} intentos",
-                ultimaExcepcion);
+            return pairs.Count == 0 ? "" : "?" + string.Join("&", pairs);
         }
 
-        private HttpRequestMessage CrearPeticionHttp(
-            string endpoint,
-            HttpMethod metodoHttp,
-            object cuerpoPeticion,
-            string tokenAcceso)
+        private T? TryParse<T>(string raw) where T : class
         {
-            var peticion = new HttpRequestMessage(metodoHttp, endpoint);
-
-            // Configurar headers
-            peticion.Headers.Authorization = new AuthenticationHeaderValue("Bearer", tokenAcceso);
-            peticion.Headers.Add("X-Request-ID", Guid.NewGuid().ToString());
-
-            // Configurar body si existe
-            if (cuerpoPeticion != null)
-            {
-                var json = JsonConvert.SerializeObject(cuerpoPeticion, _configuracionJson);
-                peticion.Content = new StringContent(json, Encoding.UTF8, "application/json");
-
-                _logger.LogTrace("Body de petición: {Json}", json);
-            }
-
-            return peticion;
+            try { return JsonSerializer.Deserialize<T>(raw, _jsonOptions); }
+            catch { return null; }
         }
-
-        private async Task<RespuestaApi<T>> ProcesarRespuestaHttpAsync<T>(
-            HttpResponseMessage respuesta,
-            Guid idCorrelacion) where T : class
-        {
-            var contenidoRespuesta = await respuesta.Content.ReadAsStringAsync();
-
-            _logger.LogTrace("[{IdCorrelacion}] Respuesta: Status={StatusCode}, Body={Contenido}",
-                idCorrelacion, respuesta.StatusCode, contenidoRespuesta);
-
-            if (respuesta.IsSuccessStatusCode)
-            {
-                try
-                {
-                    var datos = JsonConvert.DeserializeObject<T>(contenidoRespuesta, _configuracionJson);
-
-                    _logger.LogDebug("[{IdCorrelacion}] Petición exitosa", idCorrelacion);
-                    return RespuestaApi<T>.CrearExitoso(datos);
-                }
-                catch (JsonException ex)
-                {
-                    _logger.LogError(ex,
-                        "[{IdCorrelacion}] Error al deserializar respuesta JSON exitosa",
-                        idCorrelacion);
-
-                    return RespuestaApi<T>.CrearFallido(
-                        "Error al procesar la respuesta del servidor",
-                        "DESERIALIZATION_ERROR");
-                }
-            }
-            else
-            {
-                return await ManejarErrorHttpAsync<T>(respuesta, contenidoRespuesta, idCorrelacion);
-            }
-        }
-
-        private async Task<RespuestaApi<T>> ManejarErrorHttpAsync<T>(
-            HttpResponseMessage respuesta,
-            string contenidoRespuesta,
-            Guid idCorrelacion) where T : class
-        {
-            _logger.LogWarning("[{IdCorrelacion}] Error HTTP: Status={StatusCode}",
-                idCorrelacion, respuesta.StatusCode);
-
-            string mensajeError = $"Error HTTP {(int)respuesta.StatusCode}: {respuesta.ReasonPhrase}";
-            string codigoError = $"HTTP_{(int)respuesta.StatusCode}";
-
-            try
-            {
-                var errorApi = JsonConvert.DeserializeObject<RespuestaError>(contenidoRespuesta);
-
-                if (errorApi != null && !string.IsNullOrEmpty(errorApi.Error))
-                {
-                    mensajeError = errorApi.ErrorDescription ?? errorApi.Error;
-                    codigoError = errorApi.Error;
-
-                    // Si es error de autenticación, limpiar caché de token
-                    if (respuesta.StatusCode == System.Net.HttpStatusCode.Unauthorized)
-                    {
-                        _servicioAutenticacion.LimpiarCacheToken();
-                    }
-                }
-            }
-            catch (JsonException)
-            {
-                // Si no se puede deserializar como error estructurado, usar el contenido crudo
-                if (!string.IsNullOrWhiteSpace(contenidoRespuesta))
-                {
-                    mensajeError = contenidoRespuesta.Trim().Length > 500
-                        ? contenidoRespuesta.Trim().Substring(0, 500) + "..."
-                        : contenidoRespuesta.Trim();
-                }
-            }
-
-            return RespuestaApi<T>.CrearFallido(mensajeError, codigoError);
-        }
-
-        #endregion
     }
 }

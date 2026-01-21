@@ -1,6 +1,10 @@
 ﻿using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Options;
 using Sincro_Sap_Gosocket.Aplicacion.Interfaces;
-using System.Data;
+using Sincro_Sap_Gosocket.Configuracion.OpcionesSql;
+using System;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Sincro_Sap_Gosocket.Infraestructura.Sql
 {
@@ -8,16 +12,24 @@ namespace Sincro_Sap_Gosocket.Infraestructura.Sql
     {
         private readonly string _connectionString;
 
-        public SqlConnectionFactory(string connectionString)
+        public SqlConnectionFactory(IOptions<OpcionesSql> opcionesSql)
         {
-            _connectionString = connectionString ?? throw new ArgumentNullException(nameof(connectionString));
+            if (opcionesSql is null) throw new ArgumentNullException(nameof(opcionesSql));
+
+            _connectionString = opcionesSql.Value.ConnectionString;
+
+            if (string.IsNullOrWhiteSpace(_connectionString))
+                throw new InvalidOperationException("La ConnectionString de SQL no está configurada (OpcionesSql.ConnectionString).");
         }
 
-        
-
         public SqlConnection CreateConnection()
+            => new SqlConnection(_connectionString);
+
+        public async Task<SqlConnection> CreateOpenConnectionAsync(CancellationToken ct)
         {
-            return new SqlConnection(_connectionString);
+            var cn = CreateConnection();
+            await cn.OpenAsync(ct);
+            return cn;
         }
     }
 }

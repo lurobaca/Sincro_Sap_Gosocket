@@ -1,28 +1,25 @@
 ﻿// Sincro_Sap_Gosocket/Aplicacion/Interfaces/IServicioAutenticacion.cs
-using System.Threading.Tasks;
+using System.Net.Http.Headers;
 
 namespace Sincro_Sap_Gosocket.Aplicacion.Interfaces
 {
     /// <summary>
-    /// Define las operaciones para la autenticación con la API de GoSocket
+    /// Provee la autenticación requerida para consumir el API de GoSocket
+    /// según el Manual-API_Cliente: Basic Auth (ApiKey/Password).
     /// </summary>
     public interface IServicioAutenticacion
     {
         /// <summary>
-        /// Obtiene un token de acceso válido para la API
-        /// Implementa caché automático y renovación cuando expira
+        /// Construye el encabezado Authorization para GoSocket usando Basic Auth.
         /// </summary>
-        Task<string> ObtenerTokenDeAccesoAsync();
+        AuthenticationHeaderValue ObtenerEncabezadoAutorizacion();
+
+    
 
         /// <summary>
-        /// Fuerza la renovación del token, ignorando el caché
-        /// Útil cuando se detecta que un token ha sido revocado
+        /// Valida que exista configuración mínima para autenticación Basic.
+        /// Útil para fallar temprano al iniciar el Worker.
         /// </summary>
-        Task<string> RenovarTokenDeAccesoAsync();
-
-        /// <summary>
-        /// Limpia el token en caché, forzando una nueva autenticación
-        /// </summary>
-        void LimpiarCacheToken();
+        void ValidarConfiguracion();
     }
 }

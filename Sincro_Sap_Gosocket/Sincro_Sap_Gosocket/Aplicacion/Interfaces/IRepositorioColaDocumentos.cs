@@ -1,42 +1,20 @@
-﻿using System.Collections.Generic;
+﻿// Aplicacion/Interfaces/IRepositorioColaDocumentos.cs
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Sincro_Sap_Gosocket.Dominio.Entidades;
 
 namespace Sincro_Sap_Gosocket.Aplicacion.Interfaces
 {
     public interface IRepositorioColaDocumentos
     {
-        Task<IReadOnlyList<DocumentoCola>> ClaimPendientesAsync(int batchSize, string workerId, CancellationToken ct);
-    }
+        Task<IReadOnlyList<DocumentoCola>> ObtenerPendientesAsync(int batchSize, CancellationToken ct);
 
-    public class DocumentoCola
-    {
-        public long DocumentosPendientes_Id { get; set; }
-        public string SourceSystem { get; set; }
-        public string TipoCE { get; set; }
-        public string ObjType { get; set; }
-        public int DocEntry { get; set; }
-        public int? DocNum { get; set; }
-        public string DocSubType { get; set; }
-        public string DocType { get; set; }
-        public string CardCode { get; set; }
-         public string TaxDate { get; set; } 
-         public DateTime? CreateDateTime { get; set; }
-        public string Status { get; set; }
-        public int AttemptCount { get; set; }
-        public DateTime? NextAttemptAt { get; set; }
-        public DateTime? LastAttemptAt { get; set; }
-        public DateTime? LockedAt { get; set; }
-        public string LockedBy { get; set; }
-        public string LastError { get; set; }
+        /// <summary>
+        /// Documentos que ya fueron enviados y están en espera de estado de Hacienda vía GoSocket.
+        /// </summary>
+        Task<IReadOnlyList<DocumentoCola>> ObtenerPendientesSeguimientoAsync(string status, int batchSize, CancellationToken ct);
 
-        // Propiedades adicionales del documento
-     
-        public string SituacionDeComprobante { get; set; }
-        public string Remitente { get; set; }
-        public string Receptor { get; set; }
-        public int? Folio { get; set; }
-     
-        public DateTime FechaCreacion { get; set; }
+        Task<bool> LockearAsync(int documentosPendientesId, string lockedBy, CancellationToken ct);
     }
 }
