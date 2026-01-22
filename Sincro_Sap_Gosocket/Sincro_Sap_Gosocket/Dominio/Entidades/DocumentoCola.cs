@@ -9,11 +9,11 @@ namespace Sincro_Sap_Gosocket.Dominio.Entidades
     /// </summary>
     public class DocumentoCola
     {
-        public int DocumentosPendientes_Id { get; set; }
+        public Int64 DocumentosPendientes_Id { get; set; }
 
         public string? SourceSystem { get; set; }
         public string? TipoCE { get; set; }
-        public int ObjType { get; set; }
+        public string? ObjType { get; set; }
 
         public int DocEntry { get; set; }
         public int DocNum { get; set; }

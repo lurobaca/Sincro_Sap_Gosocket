@@ -24,13 +24,13 @@ namespace Sincro_Sap_Gosocket.Infraestructura.Sql
         public async Task MarcarDoneAsync(long documentosPendientesId, CancellationToken ct)
         {
             var sql = $@"
-UPDATE {Tabla}
-SET
-    Status = 'DONE',
-    LockedBy = NULL,
-    LockedAt = NULL,
-    NextAttemptAt = NULL
-WHERE DocumentosPendientes_Id = @Id;";
+                        UPDATE {Tabla}
+                        SET
+                            Status = 'DONE',
+                            LockedBy = NULL,
+                            LockedAt = NULL,
+                            NextAttemptAt = NULL
+                        WHERE DocumentosPendientes_Id = @Id;";
 
             await EjecutarAsync(sql, documentosPendientesId, ct);
         }
@@ -41,16 +41,16 @@ WHERE DocumentosPendientes_Id = @Id;";
             var nuevoStatus = attemptCount >= 5 ? "FAIL" : "RETRY";
 
             var sql = $@"
-UPDATE {Tabla}
-SET
-    Status = @Status,
-    LastError = @LastError,
-    AttemptCount = @AttemptCount,
-    LastAttemptAt = SYSUTCDATETIME(),
-    NextAttemptAt = DATEADD(MINUTE, 5, SYSUTCDATETIME()),
-    LockedBy = NULL,
-    LockedAt = NULL
-WHERE DocumentosPendientes_Id = @Id;";
+                        UPDATE {Tabla}
+                        SET
+                            Status = @Status,
+                            LastError = @LastError,
+                            AttemptCount = @AttemptCount,
+                            LastAttemptAt = SYSUTCDATETIME(),
+                            NextAttemptAt = DATEADD(MINUTE, 5, SYSUTCDATETIME()),
+                            LockedBy = NULL,
+                            LockedAt = NULL
+                        WHERE DocumentosPendientes_Id = @Id;";
 
             using var cn = await _cnFactory.CreateOpenConnectionAsync(ct);
             using var cmd = new SqlCommand(sql, cn);
@@ -66,16 +66,16 @@ WHERE DocumentosPendientes_Id = @Id;";
         public async Task MarcarWaitingHaciendaAsync(long documentosPendientesId, string? goSocketTrackId, int? httpStatus, string? responseJson, CancellationToken ct)
         {
             var sql = $@"
-UPDATE {Tabla}
-SET
-    Status = 'WAITING_HACIENDA',
-    GoSocket_TrackId = @TrackId,
-    GoSocket_HttpStatus = @HttpStatus,
-    GoSocket_ResponseJson = @Resp,
-    LastAttemptAt = SYSUTCDATETIME(),
-    LockedBy = NULL,
-    LockedAt = NULL
-WHERE DocumentosPendientes_Id = @Id;";
+                        UPDATE {Tabla}
+                        SET
+                            Status = 'WAITING_HACIENDA',
+                            GoSocket_TrackId = @TrackId,
+                            GoSocket_HttpStatus = @HttpStatus,
+                            GoSocket_ResponseJson = @Resp,
+                            LastAttemptAt = SYSUTCDATETIME(),
+                            LockedBy = NULL,
+                            LockedAt = NULL
+                        WHERE DocumentosPendientes_Id = @Id;";
 
             using var cn = await _cnFactory.CreateOpenConnectionAsync(ct);
             using var cmd = new SqlCommand(sql, cn);
@@ -93,17 +93,17 @@ WHERE DocumentosPendientes_Id = @Id;";
             var statusFinal = done ? "DONE" : "WAITING_HACIENDA";
 
             var sql = $@"
-UPDATE {Tabla}
-SET
-    Hacienda_Estado = @Estado,
-    Hacienda_ResponseJson = @Resp,
-    Status = @Status,
-    AttemptCount = @AttemptCount,
-    LastAttemptAt = SYSUTCDATETIME(),
-    NextAttemptAt = CASE WHEN @Status = 'WAITING_HACIENDA' THEN DATEADD(MINUTE, 5, SYSUTCDATETIME()) ELSE NULL END,
-    LockedBy = NULL,
-    LockedAt = NULL
-WHERE DocumentosPendientes_Id = @Id;";
+                        UPDATE {Tabla}
+                        SET
+                            Hacienda_Estado = @Estado,
+                            Hacienda_ResponseJson = @Resp,
+                            Status = @Status,
+                            AttemptCount = @AttemptCount,
+                            LastAttemptAt = SYSUTCDATETIME(),
+                            NextAttemptAt = CASE WHEN @Status = 'WAITING_HACIENDA' THEN DATEADD(MINUTE, 5, SYSUTCDATETIME()) ELSE NULL END,
+                            LockedBy = NULL,
+                            LockedAt = NULL
+                        WHERE DocumentosPendientes_Id = @Id;";
 
             using var cn = await _cnFactory.CreateOpenConnectionAsync(ct);
             using var cmd = new SqlCommand(sql, cn);
