@@ -1,4 +1,5 @@
 // Sincro_Sap_Gosocket/Worker.cs
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -13,16 +14,16 @@ namespace Sincro_Sap_Gosocket
     public class Worker : BackgroundService
     {
         private readonly ILogger<Worker> _logger;
-        private readonly IServicioProcesamientoDocumentos _servicioProcesamiento;
+        private readonly IServiceScopeFactory _scopeFactory;
         private readonly OpcionesServicio _opciones;
 
         public Worker(
             ILogger<Worker> logger,
-            IServicioProcesamientoDocumentos servicioProcesamiento,
+            IServiceScopeFactory scopeFactory,
             IOptions<OpcionesServicio> opcionesServicio)
         {
             _logger = logger;
-            _servicioProcesamiento = servicioProcesamiento;
+            _scopeFactory = scopeFactory;
             _opciones = opcionesServicio.Value;
         }
 
@@ -38,11 +39,17 @@ namespace Sincro_Sap_Gosocket
             {
                 try
                 {
+                    // Crear scope por ciclo (o por “batch”)
+                    using var scope = _scopeFactory.CreateScope();
+
+                    var servicioProcesamiento = scope.ServiceProvider
+                        .GetRequiredService<IServicioProcesamientoDocumentos>();
+
                     // 1) Enviar pendientes (PENDING/RETRY)
-                    await _servicioProcesamiento.ProcesarPendientesAsync(batchSize, stoppingToken);
+                    await servicioProcesamiento.ProcesarPendientesAsync(batchSize, stoppingToken);
 
                     // 2) Consultar seguimiento Hacienda (WAITING_HACIENDA)
-                    await _servicioProcesamiento.ProcesarSeguimientoHaciendaAsync(batchSize, stoppingToken);
+                    await servicioProcesamiento.ProcesarSeguimientoHaciendaAsync(batchSize, stoppingToken);
                 }
                 catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
                 {

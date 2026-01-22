@@ -10,10 +10,8 @@ using Sincro_Sap_Gosocket.Configuracion;
 using Sincro_Sap_Gosocket.Configuracion.OpcionesSql;
 using Sincro_Sap_Gosocket.Infraestructura.Gosocket;
 using Sincro_Sap_Gosocket.Infraestructura.Sql;
-using Sincro_Sap_Gosocket.Options;
 using System;
 using System.IO;
-using System.Linq.Expressions;
 using System.Net.Http.Headers;
 
 namespace Sincro_Sap_Gosocket
@@ -105,13 +103,12 @@ namespace Sincro_Sap_Gosocket
 
         private static void RegistrarConfiguraciones(HostBuilderContext context, IServiceCollection services)
         {
-            // GoSocket: Basic Auth (ApiBaseUrl + ApiKey + Password)
             services.Configure<OpcionesGosocket>(context.Configuration.GetSection("GoSocket"));
-
             services.Configure<OpcionesServicio>(context.Configuration.GetSection("ServiceOptions"));
 
-            // Nota: igual usamos GetConnectionString("Sql"), esto solo deja disponible el bind si usted lo usa en otros lados.
-            services.Configure<OpcionesSql>(context.Configuration.GetSection("ConnectionStrings"));
+            // Importante: NO dependa de bind raro para SQL.
+            // Aquí solo dejamos registrado OpcionesSql, pero el valor se setea en RegistrarInfraestructuraSql.
+            services.AddOptions<OpcionesSql>();
         }
 
         private static void ValidarConfiguracionInicial(HostBuilderContext context)
@@ -143,11 +140,12 @@ namespace Sincro_Sap_Gosocket
 
         private static void RegistrarInfraestructuraSql(HostBuilderContext context, IServiceCollection services)
         {
-            
-            IOptions<OpcionesSql> opcionesSql = services.BuildServiceProvider().GetRequiredService<IOptions<OpcionesSql>>();
-            opcionesSql.Value.ConnectionString  = context.Configuration.GetConnectionString("Sql"); ;
+            var cs = context.Configuration.GetConnectionString("Sql") ?? "";
 
-            services.AddScoped<ISqlConnectionFactory>(_ => new SqlConnectionFactory(opcionesSql));
+            // Opción 1 (recomendada): llenar OpcionesSql desde DI sin BuildServiceProvider()
+            services.Configure<OpcionesSql>(o => o.ConnectionString = cs);
+
+            services.AddScoped<ISqlConnectionFactory, SqlConnectionFactory>();
 
             services.AddScoped<IRepositorioColaDocumentos, RepositorioColaDocumentosSql>();
             services.AddScoped<IRepositorioEstados, RepositorioEstadosSql>();
@@ -162,17 +160,13 @@ namespace Sincro_Sap_Gosocket
 
         private static void RegistrarServiciosGoSocket(IServiceCollection services)
         {
-            // Servicio de autenticación: construye Authorization: Basic {base64(ApiKey:Password)}
-            // No necesita HttpClient.
             services.AddSingleton<IServicioAutenticacion, ServicioAutenticacion>();
 
-            // Cliente HTTP principal (API v1)
             services.AddHttpClient<IClienteGosocket, ClienteGosocket>((sp, httpClient) =>
             {
                 var opciones = sp.GetRequiredService<IOptions<OpcionesGosocket>>().Value;
                 opciones.ValidarConfiguracion(exigirOutputPath: false);
 
-                // Importante: ApiBaseUrl debe apuntar a /api/v1/ (según manual).
                 var baseUrl = opciones.ApiBaseUrl.EndsWith("/") ? opciones.ApiBaseUrl : opciones.ApiBaseUrl + "/";
                 httpClient.BaseAddress = new Uri(baseUrl);
 
@@ -181,12 +175,6 @@ namespace Sincro_Sap_Gosocket
                 httpClient.DefaultRequestHeaders.Accept.Clear();
                 httpClient.DefaultRequestHeaders.Accept.Add(
                     new MediaTypeWithQualityHeaderValue("application/json"));
-
-                // Headers opcionales de trazabilidad
-                httpClient.DefaultRequestHeaders.Remove("X-Client-Version");
-                httpClient.DefaultRequestHeaders.Remove("X-Client-Name");
-                httpClient.DefaultRequestHeaders.Add("X-Client-Version", "1.0.0");
-                httpClient.DefaultRequestHeaders.Add("X-Client-Name", "SincroSapGoSocket");
             });
         }
     }
