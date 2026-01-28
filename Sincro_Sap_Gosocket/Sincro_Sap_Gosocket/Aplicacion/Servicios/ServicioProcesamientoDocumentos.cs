@@ -129,33 +129,36 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                     if (!string.IsNullOrWhiteSpace(rutaXml))
                         _logger.LogInformation("XML GoSocket guardado en: {Ruta}", rutaXml);
 
-                
+
+                    xmlGosocket = NormalizarXml(xmlGosocket);
+
                     // 2) Construir petición GoSocket
                     var peticion = new PeticionSendDocumentToAuthority
                     {
-                        DocumentoXml = xmlGosocket,
-                        TipoDocumento = doc.TipoCE ?? string.Empty,
-                        CodigoPais = "CR",
-                        Asincrono = true
+                        FileContent = xmlGosocket,
+                        Async = true,
+                        Mapping = "11111111-1111-1111-1111-111111111111",
+                        Sign=true,
+                        DefaultCertificate =false
                     };
 
                     // 3) Enviar
                     var respuesta = await _clienteGosocket.EnviarDocumentoAutoridadAsync(peticion, ct);
 
                     var json = JsonSerializer.Serialize(respuesta);
-                    var trackId = TryParseTrackIdDesdeJson(json);
+                    var GlobalDocumentId = TryParseGlobalDocumentIdDesdeJson(json);
 
                     await _repositorioEstados.MarcarWaitingHaciendaAsync(
                         doc.DocumentosPendientes_Id,
-                        trackId,
+                        GlobalDocumentId,
                         null,
                         json,
                         ct);
 
                     _logger.LogInformation(
-                        "Documento enviado a GoSocket. DocId={DocId} TrackId={TrackId}",
+                        "Documento enviado a GoSocket. DocId={DocId} GlobalDocumentId={GlobalDocumentId}",
                         doc.DocumentosPendientes_Id,
-                        trackId);
+                        GlobalDocumentId);
                 }
                 catch (Exception ex)
                 {
@@ -170,7 +173,18 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
             }
         }
 
+        static string NormalizarXml(string xml)
+        {
+            if (string.IsNullOrWhiteSpace(xml)) return xml;
 
+            // Quitar BOM si viene embebido al inicio del string
+            xml = xml.TrimStart('\uFEFF', '\u200B');
+
+            // Asegurar saltos de línea consistentes (opcional)
+            xml = xml.Replace("\r\n", "\n");
+
+            return xml.Trim();
+        }
         /// <summary>
         /// Guarda el XML generado en disco usando la ruta configurada en appsettings (GoSocket:OutputPath).
         /// Retorna la ruta completa del archivo creado, o string.Empty si no hay OutputPath configurado.
@@ -290,7 +304,7 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                 {
                     var peticion = new PeticionGetDocument
                     {
-                        CodigoDocumento = doc.GoSocket_TrackId,
+                        CodigoDocumento = doc.DocNum.ToString(),
                         CodigoPais = "CR"
                     };
 
@@ -330,16 +344,28 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
             }
         }
 
-        private static string? TryParseTrackIdDesdeJson(string json)
+    
+        private static string? TryParseGlobalDocumentIdDesdeJson(string json)
         {
             try
             {
                 using var doc = JsonDocument.Parse(json);
-                return doc.RootElement.TryGetProperty("trackId", out var v)
-                    ? v.GetString()
-                    : null;
+
+                // 1) Entrar a "Datos"
+                if (!doc.RootElement.TryGetProperty("Datos", out var datos))
+                    return null;
+
+                // 2) Leer "TrackId"
+                if (!datos.TryGetProperty("GlobalDocumentId", out var trackProp))
+                    return null;
+
+                var trackId = trackProp.GetString();
+                return string.IsNullOrWhiteSpace(trackId) ? null : trackId;
             }
-            catch { return null; }
+            catch
+            {
+                return null;
+            }
         }
 
         private static string? TryParseEstadoHaciendaDesdeJson(string json)

@@ -52,25 +52,29 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                     Tipo = MapTipoDocumento(GetString(r0, "TipoComprobante", tipoDocumento)),
                     Numero = GetString(r0, "Consecutivo"),       // si viene NULL, lo genera su sistema/GoSocket
                     NumeroInterno = null,                        // si usa el ERP interno
-                    FechaEmis = ToIso8601(GetDate(r0, "Fecha"))   // su SP trae datetimeoffset textual
+                    FechaEmis = ToIso8601(GetDate(r0, "Fecha")),   // su SP trae datetimeoffset textual
+                    CondPago = GetString(r0, "CondicionVenta"),
+                    TermPagoCdg = GetString(r0, "PlazoCredito"),
                 },
                 Emisor = new GosocketEmisor
                 {
                     NmbEmisor = GetString(r0, "Emisor_NombreComercial", GetString(r0, "Emisor_Nombre")),
                     IDEmisor = GetString(r0, "Emisor_Numero"),
-                    ExtrInfoEmisor = new List<GosocketNameValue>(),
-                    DomFiscal = new GosocketDomicilio
+                    ExtrInfoEmisor = new List<GosocketExtraInfoDetalle>(),
+                    DomFiscal = new GosocketDomFiscal
                     {
-                        Provincia = GetString(r0, "Emisor_Provincia"),
-                        Canton = GetString(r0, "Emisor_Canton"),
-                        Distrito = GetString(r0, "Emisor_Distrito"),
-                        Barrio = GetString(r0, "Emisor_Barrio"),
-                        OtrasSenas = GetString(r0, "Emisor_OtrasSenas")
+                        Departamento = GetString(r0, "Emisor_Provincia"),
+                        Distrito = GetString(r0, "Emisor_Canton"),
+                        Ciudad = GetString(r0, "Emisor_Distrito"),
+                        Municipio = GetString(r0, "Emisor_Barrio"),
+                        Calle = GetString(r0, "Emisor_OtrasSenas"),
+                        //Referencia = GetString(r0, "Emisor_OtrasSenas")
                     },
-                    ContactoEmisor = new GosocketContacto
+                    ContactoEmisor = new GosocketContactoEmisor
                     {
+                        Extension = GetString(r0, "Emisor_CodigoPais"),
                         Telefono = GetString(r0, "Emisor_NumTelefono"),
-                        Correo = NormalizeEmail(GetString(r0, "Emisor_CorreoElectronico"))
+                        eMail = NormalizeEmail(GetString(r0, "Emisor_CorreoElectronico"))
                     }
                 },
                 Receptor = new GosocketReceptor
@@ -82,24 +86,25 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                         TipoDoc = GetString(r0, "Receptor_Tipo"),
                         NumDoc = GetString(r0, "Receptor_Numero")
                     },
-                    DomFiscalRcp = new GosocketDomicilio
+                    DomFiscalRcp = new GosocketDomFiscal
                     {
-                        Provincia = GetString(r0, "Receptor_Provincia"),
-                        Canton = GetString(r0, "Receptor_Canton"),
-                        Distrito = GetString(r0, "Receptor_Distrito"),
-                        Barrio = GetString(r0, "Receptor_Barrio"),
-                        OtrasSenas = GetString(r0, "Receptor_OtrasSenas")
+                        Departamento = GetString(r0, "Receptor_Provincia"),
+                        Distrito = GetString(r0, "Receptor_Canton"),
+                        Ciudad = GetString(r0, "Receptor_Distrito"),
+                        Municipio = GetString(r0, "Receptor_Barrio"),
+                        Calle = GetString(r0, "Receptor_OtrasSenas"),
+                        //Referencia = GetString(r0, "Receptor_OtrasSenas")
                     },
-                    ContactoReceptor = new GosocketContacto
+                    ContactoReceptor = new GosocketContactoReceptor
                     {
-                        Telefono = GetString(r0, "Receptor_NumTelefono"),
-                        Correo = NormalizeEmail(GetString(r0, "Receptor_CorreoElectronico"))
+                        Extension = GetString(r0, "Receptor_CodigoPais"),
+                        Telefono =  GetString(r0, "Receptor_NumTelefono"),
+                        eMail = NormalizeEmail(GetString(r0, "Receptor_CorreoElectronico"))
                     },
-                    ExtrInfoDoc = new List<GosocketNameValue>()
+                    ExtrInfoDoc = new List<GosocketExtraInfoDetalle>()
                 },
-                ExtrInfoDoc = new List<GosocketNameValue>()
+                ExtrInfoDoc = new List<GosocketExtraInfoDetalle>()
             };
-
             // Registro fiscal 8707 (si viene)
             AddExtra(encabezado.Emisor.ExtrInfoEmisor, "Registrofiscal8707", GetString(r0, "Emisor_Registrofiscal8707"));
 
@@ -113,31 +118,34 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
             return encabezado;
         }
 
-        private static List<GosocketDetalleItem> ConstruirDetalleDesdeSp(DataTable dt)
+        private static List<GosocketDetalle> ConstruirDetalleDesdeSp(DataTable dt)
         {
-            var detalle = new List<GosocketDetalleItem>();
+            var detalle = new List<GosocketDetalle>();
 
             foreach (DataRow row in dt.Rows)
             {
-                int nro = GetInt(row, "DetalleServicio_NumeroLinea");
+                int NumeroLinea = GetInt(row, "DetalleServicio_NumeroLinea");
 
-                var item = new GosocketDetalleItem
+                var item = new GosocketDetalle
                 {
-                    NroLinDet = nro,
-                    CdgItem = new GosocketCodigoItem
+                    NroLinDet = NumeroLinea,
+                    CdgItem = new GosocketCdgItem
                     {
                         // Según su SP: puede usar CódigoProductoServicio como CABYS si eso es lo que trae
-                        CABYS = GetString(row, "DetalleServicio_CodigoProductoServicio"),
-                        Codigo = GetString(row, "DetalleServicio_Codigo")
+                        //CABYS = GetString(row, "DetalleServicio_CodigoProductoServicio"),
+                        TpoCodigo = GetString(row, "DetalleServicio_Codigo"),
+                        VlrCodigo = GetString(row, "DetalleServicio_Codigo")
                     },
+                    //TpoListaItem = GetDecimal(row, "DetalleServicio_PartidaArancelaria"),
                     QtyItem = GetDecimal(row, "DetalleServicio_Cantidad"),
                     UnmdItem = GetString(row, "DetalleServicio_UnidadMedida"),
+                    IndListaItem = GetString(row, "DetalleServicio_TipoTransaccion"),
                     UnidadMedidaComercial = GetString(row, "DetalleServicio_UnidadMedidaComercial"),
                     DscItem = GetString(row, "DetalleServicio_Detalle"),
                     PrcNetoItem = GetDecimal(row, "DetalleServicio_PrecioUnitario"),
                     MontoBrutoItem = GetDecimal(row, "DetalleServicio_MontoTotal"),
-                    ExtraInfoDetalle = new List<GosocketNameValue>(),
-                    ImpuestosDet = new List<GosocketImpuesto>(),
+                    ExtraInfoDetalle = new List<GosocketExtraInfoDetalle>(),
+                    ImpuestosDet = new List<GosocketImpuestosDet>(),
                     MontoTotLinea = GetDecimal(row, "DetalleServicio_MontoTotalLinea")
                 };
 
@@ -145,9 +153,9 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                 var descMonto = GetDecimal(row, "DetalleServicio_MontoDescuento", 0m);
                 if (descMonto > 0m)
                 {
-                    item.SubDscto = new GosocketSubDescuento
+                    item.SubDscto = new GosocketSubDscto
                     {
-                        MontoDscto = descMonto,
+                        MntDscto = descMonto,
                         GlosaDscto = GetString(row, "DetalleServicio_NaturalezaDescuento")
                     };
                 }
@@ -159,10 +167,10 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                 var impMonto = GetDecimal(row, "DetalleServicio_ImpuestoMonto", 0m);
                 if (impMonto > 0m)
                 {
-                    item.ImpuestosDet.Add(new GosocketImpuesto
+                    item.ImpuestosDet.Add(new GosocketImpuestosDet
                     {
-                        Codigo = GetString(row, "DetalleServicio_ImpuestoCodigo", "01"),
-                        CodigoTarifaIVA = GetString(row, "DetalleServicio_ImpuestoCodigoTarifa"),
+                        CodImp = GetString(row, "DetalleServicio_ImpuestoCodigo", "01"),
+                        CodTasaImp = GetString(row, "DetalleServicio_ImpuestoCodigoTarifa"),
                         TasaImp = GetDecimal(row, "DetalleServicio_ImpuestoTarifa", 0m),
                         MontoImp = impMonto
                     });
@@ -193,8 +201,7 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                 ImporteOtrosTributos = 0m,
                 MntRcgo = 0m,
                 TotSubMonto = new List<GosocketTotSubMonto>(),
-                Impuestos = new List<GosocketImpuestoTotal>(),
-                Pagos = new List<GosocketPago>()
+                Impuestos = new List<GosocketImpuestoTotal>()
             };
 
             // Subtotal por concepto (si quiere alimentar el [1..8] con TotalGravado por ejemplo)
@@ -208,18 +215,13 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
             {
                 tot.Impuestos.Add(new GosocketImpuestoTotal
                 {
-                    Codigo = "01",
-                    CodigoTarifaIVA = null, // su SP trae ImpuestoCodigoTarifa como NULL en capturas
+                    Tipolmp = "01",
+                    CodTasaImp = null, // su SP trae ImpuestoCodigoTarifa como NULL en capturas
                     MontoImp = totalImp
                 });
             }
 
-            // MedioPago (si quiere llenar pagos)
-            var medioPago = GetString(r0, "MedioPago");
-            if (!string.IsNullOrWhiteSpace(medioPago))
-            {
-                tot.Pagos.Add(new GosocketPago { MedioPago = medioPago, MontoPago = tot.VlrPagar });
-            }
+       
 
             return tot;
         }
@@ -257,11 +259,11 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
         }
 
         // -------------------- HELPERS --------------------
-        private static void AddExtra(List<GosocketNameValue> list, string name, string value)
+        private static void AddExtra(List<GosocketExtraInfoDetalle> list, string name, string value)
         {
             if (list == null) return;
             if (string.IsNullOrWhiteSpace(value)) return;
-            list.Add(new GosocketNameValue { Name = name, Value = value });
+            list.Add(new GosocketExtraInfoDetalle { Name = name, Value = value });
         }
 
         private static string GetString(DataRow r, string col, string defaultValue = "")

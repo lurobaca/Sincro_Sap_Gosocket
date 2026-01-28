@@ -1,65 +1,66 @@
 ﻿// Sincro_Sap_Gosocket/Infraestructura/Gosocket/Dtos/Respuestas/RespuestaSendDocumentToAuthority.cs
+using System;
+using System.Collections.Generic;
 using Newtonsoft.Json;
 
 namespace Sincro_Sap_Gosocket.Infraestructura.Gosocket.Dtos.Respuestas
 {
     /// <summary>
-    /// Respuesta de envío o validación de documento
+    /// Respuesta v10 de GoSocket para SendDocumentToAuthority
     /// </summary>
     public class RespuestaSendDocumentToAuthority
     {
-        /// <summary>
-        /// Código único de track para seguimiento del proceso
-        /// </summary>
-        [JsonProperty("trackId")]
-        public string TrackId { get; set; } = string.Empty;
+        [JsonProperty("Success")]
+        public bool Success { get; set; }
 
         /// <summary>
-        /// Estado del proceso (PENDING, PROCESSING, SUCCESS, ERROR, etc.)
+        /// Identificador global del documento en GoSocket (GUID).
+        /// Cuando hay error, puede venir como 00000000-0000-0000-0000-000000000000
         /// </summary>
-        [JsonProperty("status")]
-        public string Estado { get; set; } = string.Empty;
+        [JsonProperty("GlobalDocumentId")]
+        public Guid GlobalDocumentId { get; set; }
 
         /// <summary>
-        /// Mensaje descriptivo del estado
+        /// Identificador del documento para el país (puede venir null).
         /// </summary>
-        [JsonProperty("message")]
-        public string Mensaje { get; set; } = string.Empty;
+        [JsonProperty("CountryDocumentId")]
+        public string? CountryDocumentId { get; set; }
+
+        [JsonProperty("OtherData")]
+        public OtherDataDto? OtherData { get; set; }
 
         /// <summary>
-        /// Código del documento generado (cuando es exitoso)
+        /// Lista de mensajes (errores/observaciones).
         /// </summary>
-        [JsonProperty("documentCode", NullValueHandling = NullValueHandling.Ignore)]
-        public string CodigoDocumento { get; set; } = string.Empty;
+        [JsonProperty("Messages")]
+        public List<string>? Messages { get; set; }
 
         /// <summary>
-        /// Estado en la autoridad tributaria (cuando es síncrono)
+        /// Algunos ambientes/versiones pueden devolver un objeto adicional aquí.
+        /// Déjelo como object para no romper deserialización.
         /// </summary>
-        [JsonProperty("authorityStatus", NullValueHandling = NullValueHandling.Ignore)]
-        public string EstadoAutoridad { get; set; } = string.Empty;
+        [JsonProperty("ResponseValue")]
+        public object? ResponseValue { get; set; }
 
         /// <summary>
-        /// Folio asignado al documento
+        /// Código (ej: "401", "500", etc.)
         /// </summary>
-        [JsonProperty("folio", NullValueHandling = NullValueHandling.Ignore)]
-        public int? Folio { get; set; }
+        [JsonProperty("Code")]
+        public string? Code { get; set; }
 
-        /// <summary>
-        /// Fecha de recepción del documento
-        /// </summary>
-        [JsonProperty("receivedDate", NullValueHandling = NullValueHandling.Ignore)]
-        public DateTime? FechaRecepcion { get; set; }
+        [JsonProperty("Description")]
+        public string? Description { get; set; }
 
-        /// <summary>
-        /// Código de respuesta específico de la autoridad
-        /// </summary>
-        [JsonProperty("authorityResponseCode", NullValueHandling = NullValueHandling.Ignore)]
-        public string CodigoRespuestaAutoridad { get; set; } = string.Empty;
+        [JsonProperty("ErrorException")]
+        public object? ErrorException { get; set; }
+    }
 
-        /// <summary>
-        /// Mensaje de respuesta de la autoridad
-        /// </summary>
-        [JsonProperty("authorityResponseMessage", NullValueHandling = NullValueHandling.Ignore)]
-        public string MensajeRespuestaAutoridad { get; set; } = string.Empty;
+    public class OtherDataDto
+    {
+        [JsonProperty("Country")]
+        public string? Country { get; set; }
+
+        [JsonProperty("Certifier")]
+        public string? Certifier { get; set; }
     }
 }

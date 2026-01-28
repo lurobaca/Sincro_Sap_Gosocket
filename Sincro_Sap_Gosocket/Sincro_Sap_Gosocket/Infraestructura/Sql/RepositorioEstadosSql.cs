@@ -63,13 +63,13 @@ namespace Sincro_Sap_Gosocket.Infraestructura.Sql
             await cmd.ExecuteNonQueryAsync(ct);
         }
 
-        public async Task MarcarWaitingHaciendaAsync(long documentosPendientesId, string? goSocketTrackId, int? httpStatus, string? responseJson, CancellationToken ct)
+        public async Task MarcarWaitingHaciendaAsync(long documentosPendientesId, string? goSocketGlobalDocumentId, int? httpStatus, string? responseJson, CancellationToken ct)
         {
             var sql = $@"
                         UPDATE {Tabla}
                         SET
                             Status = 'WAITING_HACIENDA',
-                            GoSocket_TrackId = @TrackId,
+                            GoSocket_TrackId = @GlobalDocumentId,
                             GoSocket_HttpStatus = @HttpStatus,
                             GoSocket_ResponseJson = @Resp,
                             LastAttemptAt = SYSUTCDATETIME(),
@@ -81,7 +81,7 @@ namespace Sincro_Sap_Gosocket.Infraestructura.Sql
             using var cmd = new SqlCommand(sql, cn);
 
             cmd.Parameters.AddWithValue("@Id", documentosPendientesId);
-            cmd.Parameters.AddWithValue("@TrackId", (object?)goSocketTrackId ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@GlobalDocumentId", (object?)goSocketGlobalDocumentId ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@HttpStatus", (object?)httpStatus ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@Resp", (object?)responseJson ?? DBNull.Value);
 
