@@ -95,8 +95,14 @@ namespace Sincro_Sap_Gosocket.Dominio
         public string FechaEmis { get; set; }
         //CondicionVenta
         public string CondPago { get; set; }
+
         //CondicionVentaOtros
-        public string ExtraInfoDoc { get; set; }
+
+        // Flex: extras a nivel documento
+        [XmlElement("ExtrInfoDoc")]
+        public List<GosocketExtraInfoDetalle> ExtrInfoDoc { get; set; } = new();
+
+ 
         //PlazoCredito
         public string TermPagoCdg { get; set; }
 
@@ -143,8 +149,12 @@ namespace Sincro_Sap_Gosocket.Dominio
     }
 
     public class GosocketReceptor
-    {
+    { 
+        public string RegimenContableR { get; set; }
         public string NmbRecep { get; set; }
+
+        public GosocketNombreRecep NombreRecep { get; set; }
+
 
         [XmlElement("DocRecep")]
         public GosocketDocRecep DocRecep { get; set; }
@@ -159,6 +169,11 @@ namespace Sincro_Sap_Gosocket.Dominio
         [XmlElement("DomFiscalRcp")]
         public GosocketDomFiscal DomFiscalRcp { get; set; }
 
+        public GosocketLugarRecep LugarRecep { get; set; }
+
+
+
+
         [XmlElement("ContactoReceptor")]
         public GosocketContactoReceptor ContactoReceptor { get; set; }
 
@@ -169,10 +184,18 @@ namespace Sincro_Sap_Gosocket.Dominio
     {
         public string PrimerNombre { get; set; }
     }
-        public class GosocketDocRecep
+    public class GosocketNombreRecep
     {
-        public string TipoDoc { get; set; }
-        public string NumDoc { get; set; }
+        public string PrimerNombre { get; set; }
+    }
+    public class GosocketLugarRecep
+    {
+        public string Calle { get; set; }
+    }
+    public class GosocketDocRecep
+    {
+        public string TipoDocRecep { get; set; }
+        public string NroDocRecep { get; set; }
     }
 
     public class GosocketDomFiscal
@@ -213,20 +236,24 @@ namespace Sincro_Sap_Gosocket.Dominio
 
     public class GosocketContactoEmisor
     {
-        //CodigoPais
+        // MH: Emisor/Telefono/CodigoPais -> GoSocket: Encabezado/Emisor/ContactoEmisor/Extension
         public string Extension { get; set; }
-        //NumTelefono
+
+        // MH: Emisor/Telefono/NumTelefono -> GoSocket: Encabezado/Emisor/ContactoEmisor/Telefono
         public string Telefono { get; set; }
-        //CorreoElectronico
+
+        // MH: Emisor/CorreoElectronico -> GoSocket: Encabezado/Emisor/ContactoEmisor/eMail
         public string eMail { get; set; }
 
         public bool HasContent()
-            => !string.IsNullOrWhiteSpace(Telefono) || !string.IsNullOrWhiteSpace(Telefono);
+            => !string.IsNullOrWhiteSpace(Telefono) || !string.IsNullOrWhiteSpace(eMail);
 
+        public bool ShouldSerializeExtension() => !string.IsNullOrWhiteSpace(Extension);
         public bool ShouldSerializeTelefono() => !string.IsNullOrWhiteSpace(Telefono);
-        public bool ShouldSerializeCorreo() => !string.IsNullOrWhiteSpace(eMail);
+        public bool ShouldSerializeeMail() => !string.IsNullOrWhiteSpace(eMail);
     }
-  public class GosocketContactoReceptor
+
+    public class GosocketContactoReceptor
     {
         //CodigoPais
         public string Extension { get; set; }
@@ -247,10 +274,12 @@ namespace Sincro_Sap_Gosocket.Dominio
     public class GosocketDetalle
     {
         public int NroLinDet { get; set; }
-        public int TpoListaItem { get; set; }
+        public string TpoListaItem { get; set; }
 
-        public GosocketCdgItem CdgItem { get; set; }
-          
+        // ...
+        [XmlElement("CdgItem")]
+        public List<GosocketCdgItem> CdgItem { get; set; } = new();
+
         public decimal QtyItem { get; set; }
         public string UnmdItem { get; set; }
         public string IndListaItem { get; set; } 
@@ -283,14 +312,18 @@ namespace Sincro_Sap_Gosocket.Dominio
 
         [XmlElement("Exoneracion")]
         public GosocketExoneracion Exoneracion { get; set; }
+        [XmlElement("DetalleComp")]
+        public GosocketDetalleComp DetalleComp { get; set; }
 
         public bool ShouldSerializeExoneracion()
             => Exoneracion != null && Exoneracion.HasContent();
 
         public decimal MontoTotLinea { get; set; }
 
+        public bool ShouldSerializeCdgItem() => CdgItem != null && CdgItem.Count > 0;
         public bool ShouldSerializeIndIsrItem() => !string.IsNullOrWhiteSpace(IndListaItem);
         public bool ShouldSerializeUnidadMedidaComercial() => !string.IsNullOrWhiteSpace(UnidadMedidaComercial);
+        public bool ShouldSerializeDetalleComp() => DetalleComp != null && DetalleComp.ShouldSerializeParte();
     }
 
     #region DetalleComp (Surtido / Partes)
