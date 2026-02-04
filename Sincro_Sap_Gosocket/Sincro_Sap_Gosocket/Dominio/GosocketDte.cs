@@ -15,8 +15,8 @@ namespace Sincro_Sap_Gosocket.Dominio
         [XmlElement("Personalizados", Order = 2)]
         public GosocketPersonalizados Personalizados { get; set; }
 
-        public bool ShouldSerializePersonalizados()
-            => Personalizados != null && Personalizados.HasContent();
+        //public bool ShouldSerializePersonalizados()
+        //    => Personalizados != null && Personalizados.HasContent();
     }
 
     // =========================
