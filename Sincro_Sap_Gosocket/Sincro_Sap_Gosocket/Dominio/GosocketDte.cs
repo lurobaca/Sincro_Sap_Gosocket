@@ -60,15 +60,23 @@ namespace Sincro_Sap_Gosocket.Dominio
         [XmlElement("Receptor", Order = 3)]
         public GosocketReceptor Receptor { get; set; }
 
-        // Flex: extras a nivel documento
-        [XmlElement("ExtrInfoDoc", Order = 4)]
-        public List<GosocketExtraInfoDetalle> ExtrInfoDoc { get; set; } = new();
-
-        public bool ShouldSerializeExtrInfoDoc()
-            => ExtrInfoDoc != null && ExtrInfoDoc.Count > 0;
-
-        [XmlElement("Totales", Order = 5)]
+        [XmlElement("Totales", Order = 4)]
         public GosocketTotales Totales { get; set; }
+
+        // /DTE/Documento/Encabezado/Impuestos[*]  (sí: va como "Impuestos" a nivel Encabezado)
+        // En la práctica lo estás colgando dentro de Totales, pero el tag debe ser "Impuestos".
+        [XmlElement("Impuestos", Order = 5)]
+        public List<GosocketImpuestoTotal> Impuestos { get; set; } = new();
+        public bool ShouldSerializeImpuestos() => Impuestos != null && Impuestos.Count > 0;
+
+        //// Flex: extras a nivel documento
+        //[XmlElement("ExtrInfoDoc", Order = 6)]
+        //public List<GosocketExtraInfoDetalle> ExtrInfoDoc { get; set; } = new();
+
+        //public bool ShouldSerializeExtrInfoDoc()
+        //    => ExtrInfoDoc != null && ExtrInfoDoc.Count > 0;
+
+           
     }
 
     // =========================
@@ -77,43 +85,56 @@ namespace Sincro_Sap_Gosocket.Dominio
     public class GosocketIdDoc
     {
         //Campos adicionales para Gosocket
+        [XmlElement(Order = 1)]
         public string Version { get; set; }
+        [XmlElement(Order = 2)]
         public string Ambiente { get; set; }
-        public string Tipo { get; set; }
-        public string Numero { get; set; }
-        public string NumeroInterno { get; set; }
 
-        //Clave
-        public string ContenidoTC { get; set; }
         //CodigoActividadEmisor
+        [XmlElement(Order = 3)]
         public string TipoEmision { get; set; }
 
-        //NumeroConsecutivo
-        public string Establecimiento { get; set; }
+        //Clave
+        [XmlElement(Order = 4)]
+        public string ContenidoTC { get; set; }
+
+        [XmlElement(Order = 5)]
+        public string Tipo { get; set; }
+
+        [XmlElement(Order = 6)]
+        public string Numero { get; set; }
+        [XmlElement(Order = 7)]
+        public string NumeroInterno { get; set; }
 
         // FechaEmision
+        [XmlElement(Order = 8)]
         public string FechaEmis { get; set; }
+
+        //NumeroConsecutivo
+        [XmlElement(Order = 9)]
+        public string Establecimiento { get; set; }
+
+        [XmlElement("Pagos", Order = 10)]
+        public List<GosocketPago> Pagos { get; set; } = new();
+
         //CondicionVenta
+        [XmlElement(Order = 11)]
         public string CondPago { get; set; }
+
+        //PlazoCredito
+        [XmlElement(Order = 12)]
+        public string TermPagoCdg { get; set; }
 
         //CondicionVentaOtros
 
         // Flex: extras a nivel documento
-        [XmlElement("ExtrInfoDoc")]
+        [XmlElement("ExtrInfoDoc", Order = 13)]
         public List<GosocketExtraInfoDetalle> ExtrInfoDoc { get; set; } = new();
-
- 
-        //PlazoCredito
-        public string TermPagoCdg { get; set; }
-
-        [XmlElement("Pagos")]
-        public List<GosocketPago> Pagos { get; set; } = new();
-
+          
         public bool ShouldSerializePagos() => Pagos != null && Pagos.Count > 0;
-
         public bool ShouldSerializeNumeroInterno() => !string.IsNullOrWhiteSpace(NumeroInterno);
         public bool ShouldSerializeContenidoTC() => !string.IsNullOrWhiteSpace(ContenidoTC);
-    
+
     }
 
     // =========================
@@ -121,96 +142,116 @@ namespace Sincro_Sap_Gosocket.Dominio
     // =========================
     public class GosocketEmisor
     {
-        //Nombre
-        public string NmbEmisor { get; set; }
         //TipoContribuyente/Tipo
+        [XmlElement(Order = 1)]
         public string TipoContribuyente { get; set; }
+
         //TipoContribuyente/Numero
+        [XmlElement(Order = 2)]
         public string IDEmisor { get; set; }
 
+        //Nombre
+        [XmlElement(Order = 3)]
+        public string NmbEmisor { get; set; }
+
+        //NombreComercial
+        [XmlElement(Order = 4)]
+        public GosocketNombreEmisor NombreEmisor { get; set; }
+
+        //Ubicacion
+        [XmlElement("DomFiscal", Order = 5)]
+        public GosocketDomFiscal DomFiscal { get; set; }
+
+        [XmlElement("ContactoEmisor", Order = 6)]
+        public GosocketContactoEmisor ContactoEmisor { get; set; }
         // Flex: extras de emisor
-        [XmlElement("ExtrInfoEmisor")]
+        [XmlElement("ExtrInfoEmisor", Order = 7)]
         public List<GosocketExtraInfoDetalle> ExtrInfoEmisor { get; set; } = new();
 
         public bool ShouldSerializeExtrInfoEmisor()
             => ExtrInfoEmisor != null && ExtrInfoEmisor.Count > 0;
-        //NombreComercial
-        public GosocketNombreEmisor NombreEmiso { get; set; }
-
-        //Ubicacion
-        [XmlElement("DomFiscal")]
-        public GosocketDomFiscal DomFiscal { get; set; }
-
-        [XmlElement("ContactoEmisor")]
-        public GosocketContactoEmisor ContactoEmisor { get; set; }
-
+     
         public bool ShouldSerializeContactoEmisor()
             => ContactoEmisor != null && ContactoEmisor.HasContent();
     }
 
     public class GosocketReceptor
-    { 
-        public string RegimenContableR { get; set; }
+    {
+        [XmlElement("DocRecep", Order = 1)]
+        public GosocketDocRecep DocRecep { get; set; }
+        
+        [XmlElement(Order = 2)]
         public string NmbRecep { get; set; }
 
+        [XmlElement(Order = 3)]
         public GosocketNombreRecep NombreRecep { get; set; }
 
-
-        [XmlElement("DocRecep")]
-        public GosocketDocRecep DocRecep { get; set; }
+        [XmlElement(Order = 4)]
+        public string RegimenContableR { get; set; }
+      
+        [XmlElement("DomFiscalRcp", Order = 5)]
+         public GosocketDomFiscal DomFiscalRcp { get; set; }
+       
+        [XmlElement(Order = 6)]
+        public GosocketLugarRecep LugarRecep { get; set; }
+        
+        [XmlElement("ContactoReceptor", Order = 7)]
+        public GosocketContactoReceptor ContactoReceptor { get; set; }
 
         // Flex: extras receptor (regimen, condición venta otros, etc.)
-        [XmlElement("ExtrInfoDoc")]
+        [XmlElement("ExtrInfoDoc", Order = 8)]
         public List<GosocketExtraInfoDetalle> ExtrInfoDoc { get; set; } = new();
 
         public bool ShouldSerializeExtrInfoDoc()
             => ExtrInfoDoc != null && ExtrInfoDoc.Count > 0;
-
-        [XmlElement("DomFiscalRcp")]
-        public GosocketDomFiscal DomFiscalRcp { get; set; }
-
-        public GosocketLugarRecep LugarRecep { get; set; }
-
-
-
-
-        [XmlElement("ContactoReceptor")]
-        public GosocketContactoReceptor ContactoReceptor { get; set; }
-
+        
         public bool ShouldSerializeContactoReceptor()
             => ContactoReceptor != null && ContactoReceptor.HasContent();
     }
     public class GosocketNombreEmisor
     {
+        [XmlElement(Order = 1)]
         public string PrimerNombre { get; set; }
     }
     public class GosocketNombreRecep
     {
+        [XmlElement(Order = 1)]
         public string PrimerNombre { get; set; }
     }
     public class GosocketLugarRecep
     {
+        [XmlElement(Order = 1)]
         public string Calle { get; set; }
     }
     public class GosocketDocRecep
     {
+        [XmlElement(Order = 1)]
         public string TipoDocRecep { get; set; }
+        [XmlElement(Order = 2)]
         public string NroDocRecep { get; set; }
     }
 
     public class GosocketDomFiscal
     {
+        //Otras Señas
+        [XmlElement(Order = 1)]
+        public string Calle { get; set; }
+
         //Provincia
+        [XmlElement(Order = 2)]
         public string Departamento { get; set; }
         //Canton
+        [XmlElement(Order = 3)]
         public string Distrito { get; set; }
         //Distrito
+        [XmlElement(Order = 4)]
         public string Ciudad { get; set; }
         //Barrio
+        [XmlElement(Order = 5)]
         public string Municipio { get; set; }
-        //Otras Señas
-        public string Calle { get; set; }
+  
         //OtrasSenasExtranjero
+        [XmlElement(Order = 6)]
         public string Referencia { get; set; }
 
         public bool ShouldSerializeBarrio() => !string.IsNullOrWhiteSpace(Municipio);
@@ -237,12 +278,15 @@ namespace Sincro_Sap_Gosocket.Dominio
     public class GosocketContactoEmisor
     {
         // MH: Emisor/Telefono/CodigoPais -> GoSocket: Encabezado/Emisor/ContactoEmisor/Extension
+        [XmlElement(Order = 1)]
         public string Extension { get; set; }
 
         // MH: Emisor/Telefono/NumTelefono -> GoSocket: Encabezado/Emisor/ContactoEmisor/Telefono
+        [XmlElement(Order = 2)]
         public string Telefono { get; set; }
 
         // MH: Emisor/CorreoElectronico -> GoSocket: Encabezado/Emisor/ContactoEmisor/eMail
+        [XmlElement(Order = 3)]
         public string eMail { get; set; }
 
         public bool HasContent()
@@ -254,13 +298,17 @@ namespace Sincro_Sap_Gosocket.Dominio
     }
 
     public class GosocketContactoReceptor
-    {
+    { 
+        //CorreoElectronico
+        [XmlElement(Order = 1)]
+        public string eMail { get; set; }
         //CodigoPais
+        [XmlElement(Order = 2)]
         public string Extension { get; set; }
         //NumTelefono
+        [XmlElement(Order = 3)]
         public string Telefono { get; set; }
-        //CorreoElectronico
-        public string eMail { get; set; }
+      
 
         public bool HasContent()
             => !string.IsNullOrWhiteSpace(Telefono) || !string.IsNullOrWhiteSpace(Telefono);
@@ -273,51 +321,62 @@ namespace Sincro_Sap_Gosocket.Dominio
     // =========================
     public class GosocketDetalle
     {
+        [XmlElement(Order = 1)]
         public int NroLinDet { get; set; }
+        [XmlElement(Order = 2)]
         public string TpoListaItem { get; set; }
 
         // ...
-        [XmlElement("CdgItem")]
+        [XmlElement("CdgItem", Order = 3)]
         public List<GosocketCdgItem> CdgItem { get; set; } = new();
 
+        [XmlElement(Order = 4)]
         public decimal QtyItem { get; set; }
+        [XmlElement(Order = 5)]
         public string UnmdItem { get; set; }
-        public string IndListaItem { get; set; } 
+        [XmlElement(Order = 6)]
+        public string IndListaItem { get; set; }
+        [XmlElement(Order = 7)]
         public string UnidadMedidaComercial { get; set; }
+        [XmlElement(Order = 8)]
         public string DscItem { get; set; }
 
-         public decimal PrcNetoItem { get; set; }
-       public decimal MontoBrutoItem { get; set; }
+        [XmlElement(Order = 9)]
+        public decimal PrcNetoItem { get; set; }
+        [XmlElement(Order = 10)]
+        public decimal MontoBrutoItem { get; set; }
 
-        [XmlElement("SubDscto")]
+        [XmlElement("SubDscto", Order = 11)]
         public GosocketSubDscto SubDscto { get; set; }
 
         public bool ShouldSerializeSubDscto()
-            => SubDscto != null && SubDscto.MntDscto  > 0m;
+            => SubDscto != null && SubDscto.MntDscto > 0m;
 
         // Flex: aquí marcamos autoconsumo: TipoTransaccion=03/05
-        [XmlElement("ExtraInfoDetalle")]
+        [XmlElement("ExtraInfoDetalle", Order = 12)]
         public List<GosocketExtraInfoDetalle> ExtraInfoDetalle { get; set; } = new();
 
+        [XmlElement(Order = 13)]
         public decimal RecargoMonto { get; set; }
 
         public bool ShouldSerializeExtraInfoDetalle()
             => ExtraInfoDetalle != null && ExtraInfoDetalle.Count > 0;
 
-        [XmlElement("ImpuestosDet")]
+        [XmlElement("ImpuestosDet", Order = 14)]
         public List<GosocketImpuestosDet> ImpuestosDet { get; set; } = new();
 
         public bool ShouldSerializeImpuestosDet()
             => ImpuestosDet != null && ImpuestosDet.Count > 0;
 
-        [XmlElement("Exoneracion")]
+        [XmlElement("Exoneracion", Order = 15)]
         public GosocketExoneracion Exoneracion { get; set; }
-        [XmlElement("DetalleComp")]
+        [XmlElement("DetalleComp", Order = 16)]
         public GosocketDetalleComp DetalleComp { get; set; }
 
         public bool ShouldSerializeExoneracion()
             => Exoneracion != null && Exoneracion.HasContent();
 
+        [XmlElement(Order = 17)]
         public decimal MontoTotLinea { get; set; }
 
         public bool ShouldSerializeCdgItem() => CdgItem != null && CdgItem.Count > 0;
@@ -332,7 +391,7 @@ namespace Sincro_Sap_Gosocket.Dominio
     public class GosocketDetalleComp
     {
         // /DTE/Documento/Detalle[1]/DetalleComp/Parte[1]
-        [XmlElement("Parte")]
+        [XmlElement("Parte", Order = 1)]
         public List<GosocketParte> Parte { get; set; } = new();
 
         public bool ShouldSerializeParte() => Parte != null && Parte.Count > 0;
@@ -346,56 +405,56 @@ namespace Sincro_Sap_Gosocket.Dominio
         // /DTE/Documento/Detalle[1]/DetalleComp/Parte[1]/CdgParte[TpoCodigoParte='XX']/VlrCodigoParte
         //
         // Nota: este nodo se repite (uno para CABYS y otro para Código Comercial “XX” o el que aplique)
-        [XmlElement("CdgParte")]
+        [XmlElement("CdgParte", Order = 1)]
         public List<GosocketCdgParte> CdgParte { get; set; } = new();
 
         public bool ShouldSerializeCdgParte() => CdgParte != null && CdgParte.Count > 0;
 
         // /DTE/Documento/Detalle[1]/DetalleComp/Parte[1]/QtyItemParte
-        [XmlElement("QtyItemParte")]
+        [XmlElement("QtyItemParte", Order = 2)]
         public decimal QtyItemParte { get; set; }
 
         // /DTE/Documento/Detalle[1]/DetalleComp/Parte[1]/UnmdItemParte
-        [XmlElement("UnmdItemParte")]
+        [XmlElement("UnmdItemParte", Order = 3)]
         public string UnmdItemParte { get; set; }
 
         // /DTE/Documento/Detalle[1]/DetalleComp/Parte[1]/UnidadComercialParte
-        [XmlElement("UnidadComercialParte")]
+        [XmlElement("UnidadComercialParte", Order = 4)]
         public string UnidadComercialParte { get; set; }
 
         // /DTE/Documento/Detalle[1]/DetalleComp/Parte[1]/DscItemParte
-        [XmlElement("DscItemParte")]
+        [XmlElement("DscItemParte", Order = 5)]
         public string DscItemParte { get; set; }
 
         // /DTE/Documento/Detalle[1]/DetalleComp/Parte[1]/PrcNetoParte
-        [XmlElement("PrcNetoParte")]
+        [XmlElement("PrcNetoParte", Order = 6)]
         public decimal PrcNetoParte { get; set; }
 
         // /DTE/Documento/Detalle[1]/DetalleComp/Parte[1]/MontoBrutoParte
-        [XmlElement("MontoBrutoParte")]
+        [XmlElement("MontoBrutoParte", Order = 7)]
         public decimal MontoBrutoParte { get; set; }
 
         // Descuento surtido
         // /DTE/Documento/Detalle[1]/DetalleComp/Parte[1]/SubDsctoParte/MntDscto
         // /DTE/Documento/Detalle[1]/DetalleComp/Parte[1]/SubDsctoParte/TipoDscto
         // /DTE/Documento/Detalle[1]/DetalleComp/Parte[1]/SubDsctoParte/GlosaDscto
-        [XmlElement("SubDsctoParte")]
+        [XmlElement("SubDsctoParte", Order = 8)]
         public GosocketSubDsctoParte SubDsctoParte { get; set; }
 
         public bool ShouldSerializeSubDsctoParte() => SubDsctoParte != null;
 
         // /DTE/Documento/Detalle[1]/DetalleComp/Parte[1]/MontoNetoParte
-        [XmlElement("MontoNetoParte")]
+        [XmlElement("MontoNetoParte", Order = 9)]
         public decimal MontoNetoParte { get; set; }
 
         // /DTE/Documento/Detalle[1]/DetalleComp/Parte[1]/ExtraInfoParte[@name='IVACobradoFabrica']
-        [XmlElement("ExtraInfoParte")]
+        [XmlElement("ExtraInfoParte", Order = 10)]
         public List<GosocketNameValue> ExtraInfoParte { get; set; } = new();
 
         public bool ShouldSerializeExtraInfoParte() => ExtraInfoParte != null && ExtraInfoParte.Count > 0;
 
         // /DTE/Documento/Detalle[1]/DetalleComp/Parte[1]/MontoTotalParte
-        [XmlElement("MontoTotalParte")]
+        [XmlElement("MontoTotalParte", Order = 11)]
         public decimal MontoTotalParte { get; set; }
 
         // Impuesto surtido
@@ -405,7 +464,7 @@ namespace Sincro_Sap_Gosocket.Dominio
         // /DTE/Documento/Detalle[1]/DetalleComp/Parte[1]/ImpuestosParte/CuotaImp
         // /DTE/Documento/Detalle[1]/DetalleComp/Parte[1]/ImpuestosParte/ExtraInfoImpDetParte[@name='CantidadUnidadMedida'|'Porcentaje'|'Proporcion'|'VolumenUnidadConsumo'|'ImpuestoUnidad']
         // /DTE/Documento/Detalle[1]/DetalleComp/Parte[1]/ImpuestosParte/MontoImp
-        [XmlElement("ImpuestosParte")]
+        [XmlElement("ImpuestosParte", Order = 12)]
         public GosocketImpuestosParte ImpuestosParte { get; set; }
 
         public bool ShouldSerializeImpuestosParte() => ImpuestosParte != null;
@@ -418,7 +477,7 @@ namespace Sincro_Sap_Gosocket.Dominio
         [XmlAttribute("TpoCodigoParte")]
         public string TpoCodigoParte { get; set; }
 
-        [XmlElement("VlrCodigoParte")]
+        [XmlElement("VlrCodigoParte", Order = 2)]
         public string VlrCodigoParte { get; set; }
 
         public bool ShouldSerializeTpoCodigoParte() => !string.IsNullOrWhiteSpace(TpoCodigoParte);
@@ -428,13 +487,13 @@ namespace Sincro_Sap_Gosocket.Dominio
     // /DTE/Documento/Detalle[1]/DetalleComp/Parte[1]/SubDsctoParte
     public class GosocketSubDsctoParte
     {
-        [XmlElement("MntDscto")]
+        [XmlElement("MntDscto", Order = 1)]
         public decimal MntDscto { get; set; }
 
-        [XmlElement("TipoDscto")]
+        [XmlElement("TipoDscto", Order = 2)]
         public string TipoDscto { get; set; }
 
-        [XmlElement("GlosaDscto")]
+        [XmlElement("GlosaDscto", Order = 3)]
         public string GlosaDscto { get; set; }
 
         public bool ShouldSerializeTipoDscto() => !string.IsNullOrWhiteSpace(TipoDscto);
@@ -444,16 +503,16 @@ namespace Sincro_Sap_Gosocket.Dominio
     // /DTE/Documento/Detalle[1]/DetalleComp/Parte[1]/ImpuestosParte
     public class GosocketImpuestosParte
     {
-        [XmlElement("TipoImp")]
+        [XmlElement("TipoImp", Order = 1)]
         public string TipoImp { get; set; }
 
-        [XmlElement("CodTasaImp")]
+        [XmlElement("CodTasaImp", Order = 2)]
         public string CodTasaImp { get; set; }
 
-        [XmlElement("TasaImp")]
+        [XmlElement("TasaImp", Order = 3)]
         public decimal? TasaImp { get; set; }
 
-        [XmlElement("CuotaImp")]
+        [XmlElement("CuotaImp", Order = 4)]
         public decimal? CuotaImp { get; set; }
 
         //CantidadUni
@@ -461,10 +520,10 @@ namespace Sincro_Sap_Gosocket.Dominio
         //Proporcion
         //VolumenUnidadConsumo
         //ImpuestoUnidad
-        [XmlElement("ExtraInfoImpDetParte")]
+        [XmlElement("ExtraInfoImpDetParte", Order = 5)]
         public List<GosocketNameValue> ExtraInfoImpDetParte { get; set; } = new();
 
-        [XmlElement("MontoImp")]
+        [XmlElement("MontoImp", Order = 6)]
         public decimal MontoImp { get; set; }
 
         public bool ShouldSerializeTipoImp() => !string.IsNullOrWhiteSpace(TipoImp);
@@ -474,7 +533,7 @@ namespace Sincro_Sap_Gosocket.Dominio
         public bool ShouldSerializeExtraInfoImpDetParte() => ExtraInfoImpDetParte != null && ExtraInfoImpDetParte.Count > 0;
     }
 
-   
+
 
     #endregion
 
@@ -484,20 +543,26 @@ namespace Sincro_Sap_Gosocket.Dominio
     ///VIN=NumeroVINoSerie
     /// </summary>
     public class GosocketCdgItem
-    { 
+    {
+        [XmlElement(Order = 1)]
         public string TpoCodigo { get; set; }
+        [XmlElement(Order = 2)]
         public string VlrCodigo { get; set; }
-           
+
         public bool ShouldSerializeTpoCodigo() => !string.IsNullOrWhiteSpace(TpoCodigo);
         public bool ShouldSerializeVlrCodigo() => !string.IsNullOrWhiteSpace(VlrCodigo);
 
     }
-  
+
     public class GosocketSubDscto
     {
-        public decimal MntDscto { get; set; }    
+        [XmlElement(Order = 1)]
+        public decimal MntDscto { get; set; }
+        [XmlElement(Order = 2)]
         public decimal PctDscto { get; set; }
+        [XmlElement(Order = 3)]
         public decimal TipoDscto { get; set; }
+        [XmlElement(Order = 4)]
         public string GlosaDscto { get; set; }
 
         public bool ShouldSerializeGlosaDscto() => !string.IsNullOrWhiteSpace(GlosaDscto);
@@ -508,24 +573,31 @@ namespace Sincro_Sap_Gosocket.Dominio
     // =========================
     public class GosocketImpuestosDet
     {
+        [XmlElement(Order = 1)]
         public string TipoImp { get; set; }
+        [XmlElement(Order = 2)]
         public string CodImp { get; set; }
+        [XmlElement(Order = 3)]
         public string CodTasaImp { get; set; }
+        [XmlElement(Order = 4)]
         public decimal TasaImp { get; set; }
+        [XmlElement(Order = 5)]
         public decimal TasMontoBaseImpaImp { get; set; }
+        [XmlElement(Order = 6)]
         public decimal MontoImp { get; set; }
+        [XmlElement(Order = 7)]
         public decimal MontoExportacion { get; set; }
- 
-    }
- 
 
-public class GosocketExoneracion
+    }
+
+
+    public class GosocketExoneracion
     {
         // =========================
         // MH: LineaDetalle/Impuesto/Exoneracion/TipoDocumentoEX1
         // GoSocket: .../Exoneracion/TipoDocumento
         // =========================
-        [XmlElement("TipoDocumento")]
+        [XmlElement("TipoDocumento", Order = 1)]
         public string TipoDocumento { get; set; } = "";
 
         // =========================
@@ -533,28 +605,28 @@ public class GosocketExoneracion
         // GoSocket: .../Exoneracion/NombreDocumento
         // (GoSocket lo nombra "NombreDocumento" aunque MH es "TipoDocumentoOTRO")
         // =========================
-        [XmlElement("NombreDocumento")]
+        [XmlElement("NombreDocumento", Order = 2)]
         public string NombreDocumento { get; set; } = "";
 
         // =========================
         // MH: LineaDetalle/Impuesto/Exoneracion/NumeroDocumento
         // GoSocket: .../Exoneracion/NumeroDocumento
         // =========================
-        [XmlElement("NumeroDocumento")]
+        [XmlElement("NumeroDocumento", Order = 3)]
         public string NumeroDocumento { get; set; } = "";
 
         // =========================
         // MH: LineaDetalle/Impuesto/Exoneracion/Articulo
         // GoSocket: .../Exoneracion/Articulo
         // =========================
-        [XmlElement("Articulo")]
+        [XmlElement("Articulo", Order = 4)]
         public string Articulo { get; set; } = "";
 
         // =========================
         // MH: LineaDetalle/Impuesto/Exoneracion/Inciso
         // GoSocket: .../Exoneracion/Inciso
         // =========================
-        [XmlElement("Inciso")]
+        [XmlElement("Inciso", Order = 5)]
         public string Inciso { get; set; } = "";
 
         // =========================
@@ -562,14 +634,14 @@ public class GosocketExoneracion
         // GoSocket: .../Exoneracion/Institucion
         // (En tu Excel lo marcan así: Institucion)
         // =========================
-        [XmlElement("Institucion")]
+        [XmlElement("Institucion", Order = 6)]
         public string Institucion { get; set; } = "";
 
         // =========================
         // MH: LineaDetalle/Impuesto/Exoneracion/NombreInstitucionOtros
         // GoSocket: .../Exoneracion/NombreInstitucion
         // =========================
-        [XmlElement("NombreInstitucion")]
+        [XmlElement("NombreInstitucion", Order = 7)]
         public string NombreInstitucion { get; set; } = "";
 
         // =========================
@@ -577,21 +649,21 @@ public class GosocketExoneracion
         // GoSocket: .../Exoneracion/FechaEmision
         // Recomendación: guardarlo como string ya formateado (ISO) para no pelear con formatos.
         // =========================
-        [XmlElement("FechaEmision")]
+        [XmlElement("FechaEmision", Order = 8)]
         public string FechaEmision { get; set; } = "";
 
         // =========================
         // MH: LineaDetalle/Impuesto/Exoneracion/TarifaExonerada
         // GoSocket: .../Exoneracion/PorcentajeCompra
         // =========================
-        [XmlElement("PorcentajeCompra")]
+        [XmlElement("PorcentajeCompra", Order = 9)]
         public decimal? PorcentajeCompra { get; set; }
 
         // =========================
         // MH: LineaDetalle/Impuesto/Exoneracion/MontoExoneracion
         // GoSocket: .../Exoneracion/MontoImpuesto
         // =========================
-        [XmlElement("MontoImpuesto")]
+        [XmlElement("MontoImpuesto", Order = 10)]
         public decimal? MontoImpuesto { get; set; }
 
         // ==========================================================
@@ -638,7 +710,7 @@ public class GosocketExoneracion
         /// GoSocket: /DTE/Documento/DscRcgGlobal[1]/NroLinDR
         /// MH: (no existe como tal) -> se puede generar como consecutivo 1..n por cada OtroCargo
         /// </summary>
-        [XmlElement("NroLinDR")]
+        [XmlElement("NroLinDR", Order = 1)]
         public int NroLinDR { get; set; }
 
         /// <summary>
@@ -646,7 +718,7 @@ public class GosocketExoneracion
         /// MH: /FacturaElectronica/OtrosCargos/OtroCargo/TipoDocumentoOC
         /// (o el equivalente que estés trayendo para identificar el tipo de cargo)
         /// </summary>
-        [XmlElement("CodigoDR")]
+        [XmlElement("CodigoDR", Order = 2)]
         public string? CodigoDR { get; set; }
 
         /// <summary>
@@ -654,7 +726,7 @@ public class GosocketExoneracion
         /// MH: /FacturaElectronica/OtrosCargos/OtroCargo/TipoDocumentoOTROS (si aplica)
         /// o un mapeo tuyo para "tipo de movimiento" (Cargo/Descuento) según tu lógica.
         /// </summary>
-        [XmlElement("TpoMov")]
+        [XmlElement("TpoMov", Order = 3)]
         public string? TpoMov { get; set; }
 
         // ---------------- Identificación Tercero ----------------
@@ -663,21 +735,21 @@ public class GosocketExoneracion
         /// GoSocket: /DTE/Documento/DscRcgGlobal[1]/TipoIdentidadTercero
         /// MH: /FacturaElectronica/OtrosCargos/OtroCargo/IdentificacionTercero/Tipo
         /// </summary>
-        [XmlElement("TipoIdentidadTercero")]
+        [XmlElement("TipoIdentidadTercero", Order = 4)]
         public string? TipoIdentidadTercero { get; set; }
 
         /// <summary>
         /// GoSocket: /DTE/Documento/DscRcgGlobal[1]/NumeroIdentidadTercero
         /// MH: /FacturaElectronica/OtrosCargos/OtroCargo/IdentificacionTercero/Numero
         /// </summary>
-        [XmlElement("NumeroIdentidadTercero")]
+        [XmlElement("NumeroIdentidadTercero", Order = 5)]
         public string? NumeroIdentidadTercero { get; set; }
 
         /// <summary>
         /// GoSocket: /DTE/Documento/DscRcgGlobal[1]/NombreTercero
         /// MH: /FacturaElectronica/OtrosCargos/OtroCargo/NombreTercero
         /// </summary>
-        [XmlElement("NombreTercero")]
+        [XmlElement("NombreTercero", Order = 6)]
         public string? NombreTercero { get; set; }
 
         // ---------------- Detalle ----------------
@@ -686,7 +758,7 @@ public class GosocketExoneracion
         /// GoSocket: /DTE/Documento/DscRcgGlobal[1]/GlosaDR
         /// MH: /FacturaElectronica/OtrosCargos/OtroCargo/Detalle
         /// </summary>
-        [XmlElement("GlosaDR")]
+        [XmlElement("GlosaDR", Order = 7)]
         public string? GlosaDR { get; set; }
 
         /// <summary>
@@ -694,14 +766,14 @@ public class GosocketExoneracion
         /// MH: (no existe como tal)
         /// Se usa como indicador (p.ej. exento/no gravado) según reglas de GoSocket / tu integración.
         /// </summary>
-        [XmlElement("IndExeDR")]
+        [XmlElement("IndExeDR", Order = 8)]
         public string? IndExeDR { get; set; }
 
         /// <summary>
         /// GoSocket: /DTE/Documento/DscRcgGlobal[1]/ValorDR
         /// MH: /FacturaElectronica/OtrosCargos/OtroCargo/MontoCargo
         /// </summary>
-        [XmlElement("ValorDR")]
+        [XmlElement("ValorDR", Order = 9)]
         public decimal ValorDR { get; set; }
 
         // ----------------- ShouldSerialize (evitar nodos vacíos) -----------------
@@ -731,106 +803,116 @@ public class GosocketExoneracion
     public class GosocketTotales
     {
         // /DTE/Documento/Encabezado/Totales/Moneda
-        [XmlElement("Moneda")]
+        [XmlElement("Moneda", Order = 1)]
         public string? Moneda { get; set; }
         public bool ShouldSerializeMoneda() => !string.IsNullOrWhiteSpace(Moneda);
 
         // /DTE/Documento/Encabezado/Totales/FctConv
-        [XmlElement("FctConv")]
+        [XmlElement("FctConv", Order = 2)]
         public decimal? FctConv { get; set; }
         public bool ShouldSerializeFctConv() => FctConv.HasValue;
 
-        // /DTE/Documento/Encabezado/Totales/TotSubMonto[i]/MontoConcepto   (i = 1..8)
-        [XmlElement("TotSubMonto")]
-        public List<GosocketTotSubMonto> TotSubMonto { get; set; } = new();
-        public bool ShouldSerializeTotSubMonto() => TotSubMonto != null && TotSubMonto.Count > 0;
-
         // /DTE/Documento/Encabezado/Totales/SubTotal
-        [XmlElement("SubTotal")]
+        [XmlElement("SubTotal", Order = 3)]
         public decimal? SubTotal { get; set; }
         public bool ShouldSerializeSubTotal() => SubTotal.HasValue;
 
-        // /DTE/Documento/Encabezado/Totales/MntExe
-        [XmlElement("MntExe")]
-        public decimal? MntExe { get; set; }
-        public bool ShouldSerializeMntExe() => MntExe.HasValue;
-
-        // /DTE/Documento/Encabezado/Totales/ImporteNoGravado
-        [XmlElement("ImporteNoGravado")]
-        public decimal? ImporteNoGravado { get; set; }
-        public bool ShouldSerializeImporteNoGravado() => ImporteNoGravado.HasValue;
-
-        // /DTE/Documento/Encabezado/Totales/ExtraInfoTotal[@name='TotalNoSujeto']
-        // (y otros extras de Totales)
-        [XmlElement("ExtraInfoTotal")]
-        public List<GosocketNameValue>? ExtraInfoTotal { get; set; }
-        public bool ShouldSerializeExtraInfoTotal() => ExtraInfoTotal != null && ExtraInfoTotal.Count > 0;
-
-        // /DTE/Documento/Encabezado/Totales/SaldoAnterior
-        [XmlElement("SaldoAnterior")]
-        public decimal? SaldoAnterior { get; set; }
-        public bool ShouldSerializeSaldoAnterior() => SaldoAnterior.HasValue;
 
         // /DTE/Documento/Encabezado/Totales/MntDcto
-        [XmlElement("MntDcto")]
+        [XmlElement("MntDcto", Order = 4)]
         public decimal? MntDcto { get; set; }
         public bool ShouldSerializeMntDcto() => MntDcto.HasValue;
 
         // /DTE/Documento/Encabezado/Totales/MntBase
-        [XmlElement("MntBase")]
+        [XmlElement("MntBase", Order = 5)]
         public decimal? MntBase { get; set; }
         public bool ShouldSerializeMntBase() => MntBase.HasValue;
 
-        // /DTE/Documento/Encabezado/Impuestos[*]  (sí: va como "Impuestos" a nivel Encabezado)
-        // En la práctica lo estás colgando dentro de Totales, pero el tag debe ser "Impuestos".
-        [XmlElement("Impuestos")]
-        public List<GosocketImpuestoTotal> Impuestos { get; set; } = new();
-        public bool ShouldSerializeImpuestos() => Impuestos != null && Impuestos.Count > 0;
 
-        // /DTE/Documento/Encabezado/Totales/MntImp
-        [XmlElement("MntImp")]
-        public decimal? MntImp { get; set; }
-        public bool ShouldSerializeMntImp() => MntImp.HasValue;
+        // /DTE/Documento/Encabezado/Totales/MntExe
+        [XmlElement("MntExe", Order = 6)]
+        public decimal? MntExe { get; set; }
+        public bool ShouldSerializeMntExe() => MntExe.HasValue;
+
+        // /DTE/Documento/Encabezado/Totales/ImporteNoGravado
+        [XmlElement("ImporteNoGravado", Order = 7)]
+        public decimal? ImporteNoGravado { get; set; }
+        public bool ShouldSerializeImporteNoGravado() => ImporteNoGravado.HasValue;
 
         // /DTE/Documento/Encabezado/Totales/ImporteOtrosTributos
-        [XmlElement("ImporteOtrosTributos")]
+        [XmlElement("ImporteOtrosTributos", Order = 8)]
         public decimal? ImporteOtrosTributos { get; set; }
         public bool ShouldSerializeImporteOtrosTributos() => ImporteOtrosTributos.HasValue;
 
-        // /DTE/Documento/Encabezado/Totales/MntRcgo
-        [XmlElement("MntRcgo")]
-        public decimal? MntRcgo { get; set; }
-        public bool ShouldSerializeMntRcgo() => MntRcgo.HasValue;
+        // /DTE/Documento/Encabezado/Totales/MntImp
+        [XmlElement("MntImp", Order = 9)]
+        public decimal? MntImp { get; set; }
+        public bool ShouldSerializeMntImp() => MntImp.HasValue;
 
-       
+        // /DTE/Documento/Encabezado/Totales/SaldoAnterior
+        [XmlElement("SaldoAnterior", Order = 10)]
+        public decimal? SaldoAnterior { get; set; }
+        public bool ShouldSerializeSaldoAnterior() => SaldoAnterior.HasValue;
+
         // /DTE/Documento/Encabezado/Totales/VlrPagar
-        [XmlElement("VlrPagar")]
+        [XmlElement("VlrPagar", Order = 11)]
         public decimal? VlrPagar { get; set; }
         public bool ShouldSerializeVlrPagar() => VlrPagar.HasValue;
+
+        // /DTE/Documento/Encabezado/Totales/VlrPalabras
+        [XmlElement("VlrPalabras", Order = 12)]
+        public string? VlrPalabras { get; set; }
+        public bool ShouldSerializeVlrPalabras() => !string.IsNullOrWhiteSpace(VlrPalabras);
+
+
+        // /DTE/Documento/Encabezado/Totales/TotSubMonto[i]/MontoConcepto   (i = 1..8)
+        [XmlElement("TotSubMonto", Order = 13)]
+        public List<GosocketTotSubMonto> TotSubMonto { get; set; } = new();
+        public bool ShouldSerializeTotSubMonto() => TotSubMonto != null && TotSubMonto.Count > 0;
+                
+        // /DTE/Documento/Encabezado/Totales/ExtraInfoTotal[@name='TotalNoSujeto']
+        // (y otros extras de Totales)
+        [XmlElement("ExtraInfoTotal", Order = 14)]
+        public List<GosocketNameValue>? ExtraInfoTotal { get; set; }
+        public bool ShouldSerializeExtraInfoTotal() => ExtraInfoTotal != null && ExtraInfoTotal.Count > 0;
+                   
+        // /DTE/Documento/Encabezado/Totales/MntRcgo
+        [XmlElement("MntRcgo", Order = 15)]
+        public decimal? MntRcgo { get; set; }
+        public bool ShouldSerializeMntRcgo() => MntRcgo.HasValue;
+           
     }
 
     // Cada ítem representa un concepto distinto según el índice [1..8]
     public class GosocketTotSubMonto
     {
+        // /DTE/Documento/Encabezado/Totales/TotSubMonto[i]/Tipo
+        [XmlElement("Tipo", Order = 1)]
+        public decimal MontoTipoConcepto { get; set; }
+       
+        // /DTE/Documento/Encabezado/Totales/TotSubMonto[i]/CodTipoMonto
+        [XmlElement("CodTipoMonto", Order = 2)]
+        public decimal CodTipoMonto { get; set; }
+
         // /DTE/Documento/Encabezado/Totales/TotSubMonto[i]/MontoConcepto
-        [XmlElement("MontoConcepto")]
+        [XmlElement("MontoConcepto", Order = 3)]
         public decimal MontoConcepto { get; set; }
     }
 
     public class GosocketImpuestoTotal
     {
         // /DTE/Documento/Encabezado/Impuestos[*]/Tipolmp
-        [XmlElement("Tipolmp")]
+        [XmlElement("Tipolmp", Order = 1)]
         public string? Tipolmp { get; set; }
         public bool ShouldSerializeTipolmp() => !string.IsNullOrWhiteSpace(Tipolmp);
 
         // /DTE/Documento/Encabezado/Impuestos[*]/CodTasaImp
-        [XmlElement("CodTasaImp")]
+        [XmlElement("CodTasaImp", Order = 2)]
         public string? CodTasaImp { get; set; }
         public bool ShouldSerializeCodTasaImp() => !string.IsNullOrWhiteSpace(CodTasaImp);
 
         // /DTE/Documento/Encabezado/Impuestos[*]/MontoImp
-        [XmlElement("MontoImp")]
+        [XmlElement("MontoImp", Order = 3)]
         public decimal? MontoImp { get; set; }
         public bool ShouldSerializeMontoImp() => MontoImp.HasValue;
     }
@@ -838,15 +920,15 @@ public class GosocketExoneracion
     public class GosocketPago
     {
         // MH: <MedioPago><TipoMedioPago/> -> GoSocket: /Encabezado/IdDoc/Pagos/TipoPago
-        [XmlElement("TipoPago")]
+        [XmlElement("TipoPago", Order = 1)]
         public string TipoPago { get; set; }
 
         // MH: <MedioPago><MedioPagoOtros/> -> GoSocket: /Encabezado/IdDoc/Pagos/DescPago
-        [XmlElement("DescPago")]
+        [XmlElement("DescPago", Order = 2)]
         public string DescPago { get; set; }
 
         // MH: <MedioPago><TotalMedioPago/> -> GoSocket: /Encabezado/IdDoc/Pagos/Monto
-        [XmlElement("Monto")]
+        [XmlElement("Monto", Order = 3)]
         public decimal Monto { get; set; }
 
         public bool ShouldSerializeTipoPago() => !string.IsNullOrWhiteSpace(TipoPago);
@@ -874,11 +956,17 @@ public class GosocketExoneracion
     // =========================
     public class GosocketReferencia
     {
+        [XmlElement(Order = 1)]
         public string TpoDocRef { get; set; }
+        [XmlElement(Order = 2)]
         public string NumeroRef { get; set; }
+        [XmlElement(Order = 3)]
         public string FechaRef { get; set; }
+        [XmlElement(Order = 4)]
         public string CodRef { get; set; }
+        [XmlElement(Order = 5)]
         public string GlosaRef { get; set; }
+        [XmlElement(Order = 6)]
         public string RazonRef { get; set; }
 
         public bool ShouldSerializeGlosaRef() => !string.IsNullOrWhiteSpace(GlosaRef);
@@ -887,10 +975,10 @@ public class GosocketExoneracion
 
     public class GosocketOtros
     {
-        [XmlElement("OtroTexto")]
+        [XmlElement("OtroTexto", Order = 1)]
         public List<GosocketExtraInfoDetalle> OtroTexto { get; set; } = new();
 
-        [XmlElement("OtroContenido")]
+        [XmlElement("OtroContenido", Order = 2)]
         public List<GosocketExtraInfoDetalle> OtroContenido { get; set; } = new();
 
         public bool HasContent()
@@ -908,20 +996,20 @@ public class GosocketExoneracion
     // =========================
     public class GosocketPersonalizados
     {
-        [XmlElement("campoString")]
+        [XmlElement("campoString", Order = 1)]
         public List<GosocketCampoString> CampoString { get; set; } = new();
 
-        [XmlElement("CustDetalle")]
-        public List<GosocketCustDetalle> CustDetalle { get; set; } = new();
+        //[XmlElement("CustDetalle", Order = 2)]
+        //public List<GosocketCustDetalle> CustDetalle { get; set; } = new();
 
-        public bool HasContent()
-            => CampoString != null && CampoString.Count > 0 || CustDetalle != null && CustDetalle.Count > 0;
+        //public bool HasContent()
+        //    => CampoString != null && CampoString.Count > 0 || CustDetalle != null && CustDetalle.Count > 0;
 
         public bool ShouldSerializeCampoString()
             => CampoString != null && CampoString.Count > 0;
 
-        public bool ShouldSerializeCustDetalle()
-            => CustDetalle != null && CustDetalle.Count > 0;
+        //public bool ShouldSerializeCustDetalle()
+        //    => CustDetalle != null && CustDetalle.Count > 0;
     }
 
     public class GosocketCampoString
@@ -935,9 +1023,10 @@ public class GosocketExoneracion
 
     public class GosocketCustDetalle
     {
+        [XmlElement(Order = 1)]
         public int NroLinDet { get; set; }
 
-        [XmlElement("campoString")]
+        [XmlElement("campoString", Order = 2)]
         public List<GosocketCampoString> CampoString { get; set; } = new();
 
         public bool ShouldSerializeCampoString()

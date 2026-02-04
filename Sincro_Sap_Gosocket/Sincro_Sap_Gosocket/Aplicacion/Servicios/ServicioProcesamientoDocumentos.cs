@@ -304,7 +304,7 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                 {
                     var peticion = new PeticionGetDocument
                     {
-                        CodigoDocumento = doc.DocNum.ToString(),
+                        CodigoDocumento = doc.GoSocket_TrackId.ToString(),
                         CodigoPais = "CR"
                     };
 
@@ -373,7 +373,7 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
             try
             {
                 using var doc = JsonDocument.Parse(json);
-                return doc.RootElement.TryGetProperty("estado", out var v)
+                return doc.RootElement.TryGetProperty("Estado", out var v)
                     ? v.GetString()
                     : null;
             }

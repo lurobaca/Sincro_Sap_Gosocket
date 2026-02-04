@@ -40,10 +40,7 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
 
             return SerializarUtf8SinBom(dte);
         }
-
-      
-
-
+        
         private static GosocketEncabezado ConstruirEncabezadoDesdeSp(string tipoDocumento, DataRow r0)
         {
 
@@ -161,8 +158,6 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
             // Condición venta / plazo crédito como extras (si su XML genérico lo requiere así)
             AddExtra(encabezado.Receptor.ExtrInfoDoc, "CondicionVenta", GetString(r0, "CondicionVenta"));
             AddExtra(encabezado.Receptor.ExtrInfoDoc, "PlazoCredito", GetString(r0, "PlazoCredito"));
-
-            // Código actividad económica
             AddExtra(encabezado.ExtrInfoDoc, "CodigoActividadEconomica", GetString(r0, "CodigoActividadEconomica"));
 
             return encabezado;
@@ -278,9 +273,7 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
         }
 
         private static GosocketDetalleComp? ConstruirDetalleCompSiAplica(DataRow row)
-        {
-            // Si no hay surtido, no crear el nodo
-         
+        { 
             var qtyParte = GetDecimal(row, "CantidadSurtido", 0m);
             if (qtyParte <= 0m) return null;
 
