@@ -9,6 +9,8 @@ namespace Sincro_Sap_Gosocket.Dominio
     [XmlRoot("DTE")]
     public class GosocketDte
     {
+      
+
         [XmlElement("Documento", Order = 1)]
         public GosocketDocumento Documento { get; set; }
 
@@ -24,6 +26,9 @@ namespace Sincro_Sap_Gosocket.Dominio
     // =========================
     public class GosocketDocumento
     {
+        [XmlAttribute("ID")]
+        public string ID { get; set; }
+
         [XmlElement("Encabezado", Order = 1)]
         public GosocketEncabezado Encabezado { get; set; }
 
@@ -255,9 +260,8 @@ namespace Sincro_Sap_Gosocket.Dominio
         public string Referencia { get; set; }
 
         public bool ShouldSerializeBarrio() => !string.IsNullOrWhiteSpace(Municipio);
-        public bool ShouldSerializeCalle() => !string.IsNullOrWhiteSpace(Calle);
-        public bool ShouldSerializeOtrasSenas() => !string.IsNullOrWhiteSpace(Referencia);
-
+        public bool ShouldSerializeCalle() => !string.IsNullOrWhiteSpace(Calle); 
+        public bool ShouldSerializeReferencia()  => !string.IsNullOrWhiteSpace(Referencia);
     }
     //    public class GosocketDomFiscal
     //{
@@ -277,17 +281,19 @@ namespace Sincro_Sap_Gosocket.Dominio
 
     public class GosocketContactoEmisor
     {
-        // MH: Emisor/Telefono/CodigoPais -> GoSocket: Encabezado/Emisor/ContactoEmisor/Extension
-        [XmlElement(Order = 1)]
-        public string Extension { get; set; }
-
-        // MH: Emisor/Telefono/NumTelefono -> GoSocket: Encabezado/Emisor/ContactoEmisor/Telefono
-        [XmlElement(Order = 2)]
-        public string Telefono { get; set; }
 
         // MH: Emisor/CorreoElectronico -> GoSocket: Encabezado/Emisor/ContactoEmisor/eMail
-        [XmlElement(Order = 3)]
+        [XmlElement(Order = 1)]
         public string eMail { get; set; }
+
+        // MH: Emisor/Telefono/CodigoPais -> GoSocket: Encabezado/Emisor/ContactoEmisor/Extension
+        [XmlElement(Order = 2)]
+        public string Extension { get; set; }
+        // MH: Emisor/Telefono/NumTelefono -> GoSocket: Encabezado/Emisor/ContactoEmisor/Telefono
+        [XmlElement(Order =3)]
+        public string Telefono { get; set; }
+
+ 
 
         public bool HasContent()
             => !string.IsNullOrWhiteSpace(Telefono) || !string.IsNullOrWhiteSpace(eMail);
