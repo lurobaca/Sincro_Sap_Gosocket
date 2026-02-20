@@ -337,23 +337,27 @@ namespace Sincro_Sap_Gosocket.Dominio
         public List<GosocketCdgItem> CdgItem { get; set; } = new();
 
         [XmlElement(Order = 4)]
-        public decimal QtyItem { get; set; }
-        [XmlElement(Order = 5)]
-        public string UnmdItem { get; set; }
-        [XmlElement(Order = 6)]
-        public string IndListaItem { get; set; }
-        [XmlElement(Order = 7)]
-        public string UnidadMedidaComercial { get; set; }
-        [XmlElement(Order = 8)]
         public string DscItem { get; set; }
+
+        [XmlElement(Order = 5)]
+        public decimal QtyItem { get; set; }
+
+        [XmlElement(Order = 6)]
+        public string UnmdItem { get; set; }
+
+        [XmlElement(Order = 7)]
+        public string IndListaItem { get; set; }
+
+        [XmlElement(Order = 8)]
+        public string UnidadMedidaComercial { get; set; }
 
         [XmlElement(Order = 9)]
         public decimal PrcNetoItem { get; set; }
         [XmlElement(Order = 10)]
-        public decimal MontoBrutoItem { get; set; }
+        public GosocketSubDscto SubDscto { get; set; }  
 
         [XmlElement("SubDscto", Order = 11)]
-        public GosocketSubDscto SubDscto { get; set; }
+        public decimal MontoBrutoItem { get; set; }
 
         public bool ShouldSerializeSubDscto()
             => SubDscto != null && SubDscto.MntDscto > 0m;
@@ -563,13 +567,15 @@ namespace Sincro_Sap_Gosocket.Dominio
     public class GosocketSubDscto
     {
         [XmlElement(Order = 1)]
-        public decimal MntDscto { get; set; }
+        public string GlosaDscto { get; set; }
+
         [XmlElement(Order = 2)]
         public decimal PctDscto { get; set; }
         [XmlElement(Order = 3)]
-        public decimal TipoDscto { get; set; }
+        public decimal MntDscto { get; set; }
+
         [XmlElement(Order = 4)]
-        public string GlosaDscto { get; set; }
+        public decimal TipoDscto { get; set; }
 
         public bool ShouldSerializeGlosaDscto() => !string.IsNullOrWhiteSpace(GlosaDscto);
     }
@@ -894,7 +900,7 @@ namespace Sincro_Sap_Gosocket.Dominio
     {
         // /DTE/Documento/Encabezado/Totales/TotSubMonto[i]/Tipo
         [XmlElement("Tipo", Order = 1)]
-        public decimal MontoTipoConcepto { get; set; }
+        public decimal Tipo { get; set; }
        
         // /DTE/Documento/Encabezado/Totales/TotSubMonto[i]/CodTipoMonto
         [XmlElement("CodTipoMonto", Order = 2)]
