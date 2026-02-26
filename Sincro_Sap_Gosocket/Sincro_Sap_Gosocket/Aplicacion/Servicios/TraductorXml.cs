@@ -6,6 +6,7 @@ using System.Data;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Xml;
 using System.Xml.Serialization;
@@ -15,15 +16,18 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
     public sealed class TraductorXml : ITraductorXml
     {
         // 8 conceptos FE44 (serv/merc x grav/exe/exo/ns)
-        private const int COD_SERV_GRAV = 1001;
-        private const int COD_SERV_EXE = 1002;
-        private const int COD_SERV_EXO = 1003;
-        private const int COD_SERV_NS = 1004;
+        // 8 conceptos FE44 (según ResumenFactura XML)
+        private const int COD_TotalServGravados = 1001;
+        private const int COD_TotalServExentos = 1002;
+        private const int COD_TotalServExonerado = 1003;
 
-        private const int COD_MERC_GRAV = 1005;
-        private const int COD_MERC_EXE = 1006;
-        private const int COD_MERC_EXO = 1007;
-        private const int COD_MERC_NS = 1008;
+
+        private const int COD_TotalServNoSujeto = 1006;//1007; 
+        private const int COD_TotalMercanciasGravadas = 1007;//1004; 
+        private const int COD_TotalMercanciasExentas = 1004;//1005;
+        private const int COD_TotalMercExonerada = 1005;//1006; 
+        private const int COD_TotalMercNoSujeta = 1008;
+
 
         // Si tenías un 9no concepto, agregalo aquí (ejemplo)
         private const int COD_OTRO_9 = 1009;
@@ -45,7 +49,7 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                     ID = idDocumento,
                     Encabezado = ConstruirEncabezadoDesdeSp(tipoDocumento, r0),
                     Detalle = ConstruirDetalleDesdeSp(datos),
-                    Referencia = new List<GosocketReferencia>(),
+                    //Referencia = new List<GosocketReferencia>(),
                     Otros = null
                 }
             };
@@ -119,10 +123,10 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                     {
                         Calle = GetString(r0, "Emisor_OtrasSenas"),
                         Departamento = GetString(r0, "Emisor_Provincia"),
-                        Distrito = GetString(r0, "Emisor_Canton"),
-                        Ciudad = GetString(r0, "Emisor_Distrito"),
+                        Distrito = GetString(r0, "Emisor_Distrito"),
+                        Ciudad = GetString(r0, "Emisor_Canton"),
                         Municipio = GetString(r0, "Emisor_Barrio"),                     
-                        Referencia = GetString(r0, "Emisor_OtrasSenas")
+                        //Referencia = GetString(r0, "Emisor_OtrasSenas")
                     },
                     ContactoEmisor = new GosocketContactoEmisor
                     {
@@ -189,8 +193,8 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
             AddExtra(encabezado.Emisor.ExtrInfoEmisor, "Registrofiscal8707", GetString(r0, "Emisor_Registrofiscal8707"));
 
             // Condición venta / plazo crédito como extras (si su XML genérico lo requiere así)
-            AddExtra(encabezado.Receptor.ExtrInfoDoc, "CondicionVenta", GetString(r0, "CondicionVenta"));
-            AddExtra(encabezado.Receptor.ExtrInfoDoc, "PlazoCredito", GetString(r0, "PlazoCredito"));
+            //AddExtra(encabezado.Receptor.ExtrInfoDoc, "CondicionVenta", GetString(r0, "CondicionVenta"));
+            //AddExtra(encabezado.Receptor.ExtrInfoDoc, "PlazoCredito", GetString(r0, "PlazoCredito"));
             //AddExtra(encabezado.ExtrInfoDoc, "CodigoActividadEconomica", GetString(r0, "CodigoActividadEconomica"));
 
             return encabezado;
@@ -217,29 +221,38 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
         {
             var codigos = ConstruirCodigosItem(row);
             var extraInfo = ConstruirExtraInfoDetalle(row);
+            var SubRecargo = ConstruirSubRecargo(row);
+            var partida = GetString(row, "DetalleServicio_PartidaArancelaria");
 
             var detalle = new GosocketDetalle
             {
-                NroLinDet = GetInt(row, "DetalleServicio_NumeroLinea"),
-                TpoListaItem = GetString(row, "DetalleServicio_PartidaArancelaria"),
+                NroLinDet = GetInt(row, "DetalleServicio_NumeroLinea"), 
+                TpoListaItem = (string.IsNullOrWhiteSpace(partida) || partida.Trim() == "0") ? null : partida.Trim(),
                 CdgItem = codigos,
                 DscItem = GetString(row, "DetalleServicio_Detalle"),
                 QtyItem = GetDecimal(row, "DetalleServicio_Cantidad"),
                 UnmdItem = GetString(row, "DetalleServicio_UnidadMedida"),
-                IndListaItem = GetString(row, "DetalleServicio_TipoTransaccion"),
+                IndListaItem = null,//GetString(row, "DetalleServicio_TipoTransaccion"),
                 UnidadMedidaComercial = GetString(row, "DetalleServicio_UnidadMedidaComercial"),          
                 PrcNetoItem = GetDecimal(row, "DetalleServicio_PrecioUnitario"),
                 MontoBrutoItem = GetDecimal(row, "DetalleServicio_MontoTotal"),
-                ExtraInfoDetalle = extraInfo,
+                MontoNetoItem = GetDecimal(row, "DetalleServicio_SubTotal"),
+                RecargoMonto = GetDecimal(row, "DetalleServicio_BaseImponible", 0m),
                 ImpuestosDet = new List<GosocketImpuestosDet>(),
-                MontoTotLinea = GetDecimal(row, "DetalleServicio_MontoTotalLinea")
+                SubRecargo= SubRecargo,
+
+
+                MontoTotalItem = GetDecimal(row, "DetalleServicio_MontoTotalLinea"),
+                ExtraInfoDetalle = extraInfo
             };
 
             AplicarDescuento(detalle, row);
+
+
             AplicarImpuesto(detalle, row);
 
             // Esto ya lo estabas metiendo como extra; lo dejo en una sola línea clara.
-            AddExtra(detalle.ExtraInfoDetalle, "TipoTransaccion", GetString(row, "DetalleServicio_TipoTransaccion"));
+         
 
             // DetalleComp (surtido) - solo si hay datos de surtido en la fila
             var detalleComp = ConstruirDetalleCompSiAplica(row);
@@ -265,13 +278,24 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
 
             return codigos;
         }
+        private static GosocketSubRecargo ConstruirSubRecargo(DataRow row)
+        {
+            var mnt = GetDecimal(row, "DetalleServicio_ImpuestoNeto", 0m); // <-- ajustá el nombre real de tu columna
 
+            if (mnt <= 0m) return null;
+
+            return new GosocketSubRecargo
+            {
+
+                MntRecargo = mnt
+            };
+        }
         private static List<GosocketExtraInfoDetalle> ConstruirExtraInfoDetalle(DataRow row)
         {
             var extras = new List<GosocketExtraInfoDetalle>();
-
-            AddExtraSiTieneValor(extras, "RegistroMedicamento", GetString(row, "DetalleServicio_RegistroMedicamento"));
-            AddExtraSiTieneValor(extras, "FormaFarmaceutica", GetString(row, "DetalleServicio_FormaFarmaceutica"));
+            AddExtraSiTieneValor(extras, "ImpuestoAsumido", GetString(row, "DetalleServicio_IVACobradoFabrica"));
+            AddExtraSiTieneValorNoCero(extras, "RegistroMedicamento", GetString(row, "DetalleServicio_RegistroMedicamento"));
+            AddExtraSiTieneValorNoCero(extras, "FormaFarmaceutica", GetString(row, "DetalleServicio_FormaFarmaceutica"));
 
             return extras;
         }
@@ -284,6 +308,7 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
             item.SubDscto = new GosocketSubDscto
             {
                 MntDscto = montoDescuento,
+                PctDscto = GetString(row, "DetalleServicio_CodigoDescuento"),
                 GlosaDscto = GetString(row, "DetalleServicio_NaturalezaDescuento")
             };
         }
@@ -295,17 +320,14 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
 
             item.ImpuestosDet.Add(new GosocketImpuestosDet
             {
-                CodImp = GetString(row, "DetalleServicio_ImpuestoCodigo", "01"),
+                TipoImp = GetString(row, "DetalleServicio_ImpuestoCodigo", "01"),
+                //CodImp = GetString(row, "DetalleServicio_ImpuestoCodigo", "01"),
                 CodTasaImp = GetString(row, "DetalleServicio_ImpuestoCodigoTarifa"),
                 TasaImp = GetDecimal(row, "DetalleServicio_ImpuestoTarifa", 0m),
                 MontoImp = montoImp
             });
 
-            AddExtra(item.ExtraInfoDetalle, "ImpuestoNeto",
-                GetDecimal(row, "DetalleServicio_ImpuestoNeto", montoImp).ToString("0.00", CultureInfo.InvariantCulture));
-
-            AddExtra(item.ExtraInfoDetalle, "BaseImponible",
-                GetDecimal(row, "DetalleServicio_BaseImponible", 0m).ToString("0.00", CultureInfo.InvariantCulture));
+ 
         }
 
         private static GosocketDetalleComp? ConstruirDetalleCompSiAplica(DataRow row)
@@ -328,6 +350,7 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                 MontoNetoParte = GetDecimal(row, "MontoNetoSurtido", 0m),      // si existe
                 MontoTotalParte = GetDecimal(row, "MontoTotalParte", 0m)       // si existe
             };
+            
 
             AplicarDescuentoParte(parte, row);
             AplicarImpuestoParte(parte, row);
@@ -348,7 +371,7 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
             parte.SubDsctoParte = new GosocketSubDsctoParte
             {
                 MntDscto = montoDcto,
-                TipoDscto = string.IsNullOrWhiteSpace(tipoDcto) ? "01" : tipoDcto
+                //TipoDscto = string.IsNullOrWhiteSpace(tipoDcto) ? "01" : tipoDcto
                 // GlosaDscto = GetString(row, "GlosaDescuentoSurtido") // si existe
             };
         }
@@ -379,12 +402,35 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
             codigos.Add(new GosocketCdgItem { TpoCodigo = tipo, VlrCodigo = valor });
         }
 
-        private static void AddExtraSiTieneValor(List<GosocketExtraInfoDetalle> extras, string name, string value)
+       
+        private static void AddExtraSiTieneValor(List<GosocketExtraInfoDetalle> extras,string name,string? value)
         {
             if (string.IsNullOrWhiteSpace(value)) return;
-            extras.Add(new GosocketExtraInfoDetalle { Name = name, Value = value });
-        }
 
+            extras.Add(new GosocketExtraInfoDetalle
+            {
+                Name = name,
+                Value = value.Trim()
+            });
+        }
+        private static void AddExtraSiTieneValorNoCero(
+    List<GosocketExtraInfoDetalle> extras,
+    string name,
+    string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value)) return;
+
+            var v = value.Trim();
+
+            // Ignorar ceros comunes
+            if (v == "0" || v == "0.0" || v == "0.00" || v == "0.000000") return;
+
+            extras.Add(new GosocketExtraInfoDetalle
+            {
+                Name = name,
+                Value = v
+            });
+        }
         private static string GetStringOrDefault(DataRow row, string columnName, string defaultValue)
         {
             return row.Table.Columns.Contains(columnName)
@@ -404,7 +450,7 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
              var ImpuestoCodigo = GetString(r0, "DetalleServicio_ImpuestoCodigo"); // ajuste al nombre real
             lista.Add(new GosocketImpuestoTotal
             {
-                Tipolmp = ImpuestoCodigo,             
+                TipoImp = ImpuestoCodigo,             
                 CodTasaImp = string.IsNullOrWhiteSpace(codTasa) ? null : codTasa,
                 MontoImp = mntImp
             });
@@ -538,30 +584,30 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                 MntRcgo = null
             };
 
-            var sGrav = GetDecimal(r0, "ResumenFactura_TotalServGravados", 0m);
-            var sExe = GetDecimal(r0, "ResumenFactura_TotalServExentos", 0m);
-            var sExo = GetDecimal(r0, "ResumenFactura_TotalServExonerado", 0m);
-            var sNS = GetDecimal(r0, "ResumenFactura_TotalServNoSujeto", 0m);
+            var TotalServGravados = GetDecimal(r0, "ResumenFactura_TotalServGravados", 0m);
+            var TotalServExentos = GetDecimal(r0, "ResumenFactura_TotalServExentos", 0m);
+            var TotalServExonerado = GetDecimal(r0, "ResumenFactura_TotalServExonerado", 0m);
+            var TotalServNoSujeto = GetDecimal(r0, "ResumenFactura_TotalServNoSujeto", 0m);
 
-            var mGrav = GetDecimal(r0, "ResumenFactura_TotalMercanciasGravadas", 0m);
-            var mExe = GetDecimal(r0, "ResumenFactura_TotalMercanciasExentas", 0m);
-            var mExo = GetDecimal(r0, "ResumenFactura_TotalMercanciasExonerada", 0m);
-            var mNS = GetDecimal(r0, "ResumenFactura_TotalMercanciasNoSujeto", 0m);
+            var TotalMercanciasGravadas = GetDecimal(r0, "ResumenFactura_TotalMercanciasGravadas", 0m);
+            var TotalMercanciasExentas = GetDecimal(r0, "ResumenFactura_TotalMercanciasExentas", 0m);
+            var TotalMercanciasExonerada = GetDecimal(r0, "ResumenFactura_TotalMercanciasExonerada", 0m);
+            var TotalMercanciasNoSujeto = GetDecimal(r0, "ResumenFactura_TotalMercanciasNoSujeto", 0m);
 
             // Si ocupás un 9no, sacalo del SP (ejemplo)
             // var otro9 = GetDecimal(r0, "ResumenFactura_AlgoMas", 0m);
 
             var list = new List<GosocketTotSubMonto>();
 
-            AddTotSubMonto(list, COD_SERV_GRAV, sGrav); // [1]
-            AddTotSubMonto(list, COD_SERV_EXE, sExe);  // [2]
-            AddTotSubMonto(list, COD_SERV_EXO, sExo);  // [3]
-            AddTotSubMonto(list, COD_SERV_NS, sNS);   // [4]
-
-            AddTotSubMonto(list, COD_MERC_GRAV, mGrav); // [5]
-            AddTotSubMonto(list, COD_MERC_EXE, mExe);  // [6]
-            AddTotSubMonto(list, COD_MERC_EXO, mExo);  // [7]
-            AddTotSubMonto(list, COD_MERC_NS, mNS);   // [8]
+            
+            AddTotSubMonto(list, 0, TotalServGravados); // TotalServGravados
+            AddTotSubMonto(list, 0, TotalServExentos); // TotalServExentos
+            AddTotSubMonto(list, 0, TotalServExonerado); // TotalServExonerado
+            AddTotSubMonto(list, 0, TotalMercanciasGravadas); // TotalMercanciasGravadas
+            AddTotSubMonto(list, 0, TotalMercanciasExentas); // TotalMercanciasExentas
+            AddTotSubMonto(list, 0, TotalMercanciasExonerada); // TotalMercExonerada           
+            AddTotSubMonto(list, 0, TotalServNoSujeto); // TotalServNoSujeto
+            AddTotSubMonto(list, 0, TotalMercanciasNoSujeto); // TotalMercanciasNoSujeto
 
             // AddTotSubMonto(list, COD_OTRO_9, otro9);  // [9] si aplica
 
@@ -576,7 +622,7 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
         private static void AddTotSubMonto(List<GosocketTotSubMonto> list, int codigo, decimal monto)
         {
             // Si querés que salgan aunque sea 0, quitá este if.
-            if (monto == 0m) return;
+            //if (monto == 0m) return;
 
             list.Add(new GosocketTotSubMonto
             {
@@ -590,13 +636,34 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
         {
             var p = new GosocketPersonalizados();
 
-            var proveedor = GetString(r0, "ProveedorSistemas"); // OJO: revise el nombre real de la columna
-            if (!string.IsNullOrWhiteSpace(proveedor))
-                p.CampoString.Add(new GosocketCampoString { Name = "ProveedorSistemas", Value = proveedor });
+            var SistemaEmisor = GetString(r0, "SistemaEmisor");  
+            if (!string.IsNullOrWhiteSpace(SistemaEmisor))
+                p.CampoString.Add(new GosocketCampoString { Name = "SistemaEmisor", Value = SistemaEmisor });
 
-            var codCliente = GetString(r0, "CodCliente"); // OJO: revise el nombre real de la columna
-            if (!string.IsNullOrWhiteSpace(codCliente))
-                p.CampoString.Add(new GosocketCampoString { Name = "CodCliente", Value = codCliente });
+            var DireccionReceptor = GetString(r0, "Receptor_OtrasSenas");  
+            if (!string.IsNullOrWhiteSpace(DireccionReceptor))
+                p.CampoString.Add(new GosocketCampoString { Name = "DireccionReceptor", Value = DireccionReceptor });
+
+            var CorreosReceptor = GetString(r0, "Receptor_CorreoElectronico");  
+            if (!string.IsNullOrWhiteSpace(CorreosReceptor))
+                p.CampoString.Add(new GosocketCampoString { Name = "CorreosReceptor", Value = CorreosReceptor });
+
+            var Observaciones = GetString(r0, "Observaciones");
+            if (!string.IsNullOrWhiteSpace(CorreosReceptor))
+                p.CampoString.Add(new GosocketCampoString { Name = "Observaciones", Value = CorreosReceptor });
+
+            var Adenda_Tipo = GetString(r0, "Adenda_Tipo");
+            if (!string.IsNullOrWhiteSpace(CorreosReceptor))
+                p.CampoString.Add(new GosocketCampoString { Name = "Adenda_Tipo", Value = Adenda_Tipo });
+
+            var MontoEnLetras = GetString(r0, "MontoEnLetras");
+            if (!string.IsNullOrWhiteSpace(CorreosReceptor))
+                p.CampoString.Add(new GosocketCampoString { Name = "MontoEnLetras", Value = MontoEnLetras });
+
+            var Param18 = GetString(r0, "Param18");
+            if (!string.IsNullOrWhiteSpace(CorreosReceptor))
+                p.CampoString.Add(new GosocketCampoString { Name = "Param18", Value = Param18 });
+            
 
             return p.CampoString.Count > 0 ? p : null;
         }

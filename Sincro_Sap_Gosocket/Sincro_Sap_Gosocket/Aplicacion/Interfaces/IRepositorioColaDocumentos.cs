@@ -16,5 +16,14 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Interfaces
         Task<IReadOnlyList<DocumentoCola>> ObtenerPendientesSeguimientoAsync(string status, int batchSize, CancellationToken ct);
 
         Task<bool> LockearAsync(int documentosPendientesId, string lockedBy, CancellationToken ct);
+
+
+        /// <summary>
+        /// Incrementa en 1 el consecutivo del tipo indicado (FE, TE, NC, ND, FEC, MR_Aceptado, etc.)
+        /// y retorna el consecutivo nuevo formateado a 20 dígitos.
+        /// </summary>
+        Task<string> ActualizarConsecutivoHaciendaAsync(string tipo , CancellationToken ct);
+
+
     }
 }

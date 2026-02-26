@@ -14,6 +14,7 @@ namespace Sincro_Sap_Gosocket.Infraestructura.Sql
     public class RepositorioColaDocumentosSql : IRepositorioColaDocumentos
     {
         private const string Tabla = "[Integration].[DocumentosPendientes]";
+        private const string TablaConsecutivos = "[dbo].[ComprobantesElectronicos_Consecutivos]";
 
         private readonly ISqlConnectionFactory _cnFactory;
         private readonly ILogger<RepositorioColaDocumentosSql> _logger;
@@ -138,6 +139,55 @@ namespace Sincro_Sap_Gosocket.Infraestructura.Sql
             });
         }
 
+
+        private static readonly Dictionary<string, string> TipoAColumna =
+          new(StringComparer.OrdinalIgnoreCase)
+          {
+              ["FE"] = "FE",
+              ["FES"] = "FE",
+              ["TE"] = "TE",
+              ["TES"] = "TE",
+              ["NC"] = "NC",
+              ["NCS"] = "NC",
+              ["ND"] = "ND",
+              ["NDS"] = "ND",
+              ["FEC"] = "FEC",
+              ["RE"] = "RE",
+              ["MR_Aceptado"] = "MR_Aceptado",
+              ["MR_Aceptado_Parcial"] = "MR_Aceptado_Parcial",
+              ["MR_Rechazado"] = "MR_Rechazado",
+          };
+
+        public async Task<string> ActualizarConsecutivoHaciendaAsync(string tipo , CancellationToken ct)
+        {
+          
+
+            if (!TipoAColumna.TryGetValue(tipo, out var columna))
+                throw new ArgumentException($"Tipo no válido: {tipo}", nameof(tipo));
+
+            var sql = $@"
+                    UPDATE dbo.ComprobantesElectronicos_Consecutivos
+                    SET [{columna}] =
+                        RIGHT(
+                            REPLICATE('0', 20) +
+                            LTRIM(RTRIM(
+                                CAST(
+                                    CAST(ISNULL([{columna}], '0') AS BIGINT) + 1
+                                    AS VARCHAR(30)
+                                )
+                            )),
+                            20
+                        )
+                    OUTPUT INSERTED.[{columna}];";
+
+            var result = await EjecutarScalarAsync(sql, ct);
+
+            if (result is null || result == DBNull.Value)
+                throw new InvalidOperationException("No se pudo actualizar/obtener el consecutivo.");
+
+            return Convert.ToString(result)!;
+        }
+
         public async Task<bool> LockearAsync(int documentosPendientesId, string lockedBy, CancellationToken ct)
         {
             if (documentosPendientesId <= 0)
@@ -188,7 +238,18 @@ namespace Sincro_Sap_Gosocket.Infraestructura.Sql
 
             return lista;
         }
+        private async Task<object?> EjecutarScalarAsync(
+            string sql,
+            CancellationToken ct,
+            Action<SqlCommand>? parametrizar = null)
+        {
+            await using var cn = await AbrirConexionAsync(ct);
+            await using var cmd = new SqlCommand(sql, cn);
 
+            parametrizar?.Invoke(cmd);
+
+            return await cmd.ExecuteScalarAsync(ct);
+        }
         private async Task<SqlConnection> AbrirConexionAsync(CancellationToken ct)
         {
             var cn = _cnFactory.CreateConnection();
@@ -262,5 +323,7 @@ namespace Sincro_Sap_Gosocket.Infraestructura.Sql
             var ord = rd.GetOrdinal(col);
             return rd.IsDBNull(ord) ? (DateTime?)null : rd.GetDateTime(ord);
         }
+
+      
     }
 }

@@ -159,6 +159,9 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                         "Documento enviado a GoSocket. DocId={DocId} GlobalDocumentId={GlobalDocumentId}",
                         doc.DocumentosPendientes_Id,
                         GlobalDocumentId);
+
+                   await _repositorioCola.ActualizarConsecutivoHaciendaAsync (doc.TipoCE,  ct);
+
                 }
                 catch (Exception ex)
                 {
@@ -330,6 +333,8 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                             10,
                             ct);
                     }
+
+              
                 }
                 catch (Exception ex)
                 {

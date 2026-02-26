@@ -49,7 +49,7 @@ namespace Sincro_Sap_Gosocket
                     await servicioProcesamiento.ProcesarPendientesAsync(batchSize, stoppingToken);
 
                     // 2) Consultar seguimiento Hacienda (WAITING_HACIENDA)
-                    //await servicioProcesamiento.ProcesarSeguimientoHaciendaAsync(batchSize, stoppingToken);
+                    await servicioProcesamiento.ProcesarSeguimientoHaciendaAsync(batchSize, stoppingToken);
                 }
                 catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
                 {
