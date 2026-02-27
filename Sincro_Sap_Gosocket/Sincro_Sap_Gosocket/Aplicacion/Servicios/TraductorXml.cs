@@ -579,7 +579,7 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                 VlrPalabras = "",
                 MntExe = 0m,
                 ImporteNoGravado = 0m,
-                SaldoAnterior = GetDecimal(r0, "ResumenFactura_TotalVentaNeta", 0m),
+                SaldoAnterior = GetDecimal(r0, "ResumenFactura_TotalVenta", 0m),
                 ImporteOtrosTributos = 0m,
                 MntRcgo = null
             };
