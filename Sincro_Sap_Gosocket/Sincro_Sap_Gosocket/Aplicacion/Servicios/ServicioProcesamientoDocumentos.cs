@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using Sincro_Sap_Gosocket.Aplicacion.Interfaces;
 using Sincro_Sap_Gosocket.Configuracion;
 using Sincro_Sap_Gosocket.Dominio.Entidades;
+using Sincro_Sap_Gosocket.Infraestructura.Gosocket.Dtos.Comun;
 using Sincro_Sap_Gosocket.Infraestructura.Gosocket.Dtos.Peticiones;
 using System;
 using System.Collections.Generic;
@@ -125,7 +126,7 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                     var xmlGosocket = _traductor.Traducir(tipo, datos);
 
                     // 3.1) Guardar XML en disco (si OutputPath está configurado)
-                    var rutaXml = GuardarXmlEnDisco(doc, tipo, datos.Rows[0], xmlGosocket);
+                    var rutaXml = GuardarXmlEnDisco(doc, tipo, datos.Rows[0], xmlGosocket, "Comprobante");
                     if (!string.IsNullOrWhiteSpace(rutaXml))
                         _logger.LogInformation("XML GoSocket guardado en: {Ruta}", rutaXml);
 
@@ -143,10 +144,47 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                     };
 
                     // 3) Enviar
+                    //var respuesta = await _clienteGosocket.EnviarDocumentoAutoridadAsync(peticion, ct);
+
+                    //var json = JsonSerializer.Serialize(respuesta);
+                    //var GlobalDocumentId = TryParseGlobalDocumentIdDesdeJson(json);
+
                     var respuesta = await _clienteGosocket.EnviarDocumentoAutoridadAsync(peticion, ct);
 
+                    // Convertir a JSON (solo como puente)
                     var json = JsonSerializer.Serialize(respuesta);
-                    var GlobalDocumentId = TryParseGlobalDocumentIdDesdeJson(json);
+
+                    // Caer en tu estructura
+                    var envelope = JsonSerializer.Deserialize<GosocketRespuesta>(json);
+                    var envioOk = envelope?.Exitoso == true && envelope?.Datos?.Success == true;
+                    var GlobalDocumentId = envelope?.Datos?.GlobalDocumentId;
+
+                    var code = envelope?.Datos?.Code ?? envelope?.CodigoError ?? "N/A";
+                    var desc = envelope?.Datos?.Description ?? envelope?.MensajeError ?? "Error sin descripción.";
+                    var detalle = (envelope?.Datos?.Messages != null && envelope.Datos.Messages.Count > 0)
+                        ? string.Join(" | ", envelope.Datos.Messages)
+                        : null;
+
+                    var TextoRespuesa = $"{detalle}";
+                    GuardarXmlEnDisco(doc, tipo, datos.Rows[0], TextoRespuesa, "Respuesta");
+
+                    if (!envioOk)
+                    {                       
+
+                        _logger.LogWarning(
+                             "GoSocket rechazó el envío. QueueId={QueueId} GlobalDocumentId={GlobalDocumentId} Code={Code} Desc={Desc}{Detalle}",
+                             doc.DocumentosPendientes_Id,
+                             GlobalDocumentId,
+                             code,
+                             desc,
+                             detalle is null ? "" : $" Detalle={detalle}"
+                         );
+
+                        throw new InvalidOperationException(
+                            $"GoSocket rechazó el envío. Code={code}. Desc={desc}" + (detalle is null ? "" : $" Detalle={detalle}")
+                        );
+                    }
+
 
                     await _repositorioEstados.MarcarWaitingHaciendaAsync(
                         doc.DocumentosPendientes_Id,
@@ -192,7 +230,7 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
         /// Guarda el XML generado en disco usando la ruta configurada en appsettings (GoSocket:OutputPath).
         /// Retorna la ruta completa del archivo creado, o string.Empty si no hay OutputPath configurado.
         /// </summary>
-        private string GuardarXmlEnDisco(DocumentoCola item, string tipo, DataRow r0, string xml)
+        private string GuardarXmlEnDisco(DocumentoCola item, string tipo, DataRow r0, string xml,string Prefijo)
         {
             // Si no se configuró OutputPath, no se guarda (no se considera error).
             if (string.IsNullOrWhiteSpace(_gosocketOptions.OutputPath))
@@ -219,7 +257,7 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
 
             Directory.CreateDirectory(carpeta);
 
-            var fullPath = Path.Combine(carpeta, $"{nombreBase}.xml");
+            var fullPath = Path.Combine(carpeta, $"{Prefijo}_{nombreBase}.xml");
 
             // UTF-8 sin BOM
             var utf8NoBom = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
@@ -227,8 +265,9 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
 
             return fullPath;
         }
+ 
 
-        private static string GetString(DataRow r, string col)
+    private static string GetString(DataRow r, string col)
         {
             if (r.Table.Columns.Contains(col) && r[col] != DBNull.Value)
                 return Convert.ToString(r[col])?.Trim() ?? string.Empty;

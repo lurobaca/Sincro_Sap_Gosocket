@@ -443,8 +443,8 @@ namespace Sincro_Sap_Gosocket.Dominio
         public bool ShouldSerializeGlosaRecargo() =>
             !string.IsNullOrWhiteSpace(GlosaRecargo);
 
-        public bool ShouldSerializeMntRecargo() =>
-            MntRecargo.HasValue && MntRecargo.Value > 0m;
+        //public bool ShouldSerializeMntRecargo() =>
+        //    MntRecargo.HasValue && MntRecargo.Value > 0m;
 
        
     }
@@ -658,6 +658,10 @@ namespace Sincro_Sap_Gosocket.Dominio
         [XmlElement(Order = 7)]
         public decimal? MontoExportacion { get; set; }
 
+        [XmlElement(Order = 8)]
+        
+        public GosocketExoneracion Exoneracion { get; set; }
+
         public bool ShouldSerializeMontoExportacion() => MontoExportacion.HasValue;
     }
 
@@ -724,18 +728,20 @@ namespace Sincro_Sap_Gosocket.Dominio
         public string FechaEmision { get; set; } = "";
 
         // =========================
-        // MH: LineaDetalle/Impuesto/Exoneracion/TarifaExonerada
-        // GoSocket: .../Exoneracion/PorcentajeCompra
-        // =========================
-        [XmlElement("PorcentajeCompra", Order = 9)]
-        public decimal? PorcentajeCompra { get; set; }
-
-        // =========================
         // MH: LineaDetalle/Impuesto/Exoneracion/MontoExoneracion
         // GoSocket: .../Exoneracion/MontoImpuesto
         // =========================
-        [XmlElement("MontoImpuesto", Order = 10)]
+        [XmlElement("MontoImpuesto", Order = 9)]
         public decimal? MontoImpuesto { get; set; }
+
+        // =========================
+        // MH: LineaDetalle/Impuesto/Exoneracion/TarifaExonerada
+        // GoSocket: .../Exoneracion/PorcentajeCompra
+        // =========================
+        [XmlElement("PorcentajeCompra", Order = 10)]
+        public decimal? PorcentajeCompra { get; set; }
+
+ 
 
         // ==========================================================
         // SHOULD SERIALIZE (evita nodos vacíos => evita rechazos)
