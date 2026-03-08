@@ -956,8 +956,12 @@ namespace Sincro_Sap_Gosocket.Dominio
         // /DTE/Documento/Encabezado/Totales/MntRcgo
         [XmlElement("MntRcgo", Order = 15)]
         public decimal? MntRcgo { get; set; }
-        public bool ShouldSerializeMntRcgo() => MntRcgo.HasValue;
-           
+
+        public bool ShouldSerializeMntRcgo()
+        {
+            return MntRcgo.HasValue && MntRcgo.Value != 0;
+        }
+
     }
 
     // Cada ítem representa un concepto distinto según el índice [1..8]

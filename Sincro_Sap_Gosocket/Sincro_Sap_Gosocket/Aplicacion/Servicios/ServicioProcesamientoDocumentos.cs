@@ -227,37 +227,44 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
             return xml.Trim();
         }
         /// <summary>
-        /// Guarda el XML generado en disco usando la ruta configurada en appsettings (GoSocket:OutputPath).
+        /// Guarda un archivo XML en disco usando la ruta configurada en appsettings (GoSocket:OutputPath).
+        /// Crea una carpeta por comprobante usando el consecutivo interno de SAP, y dentro de ella
+        /// almacena únicamente los archivos vinculados a ese comprobante:
+        /// - XML de GoSocket
+        /// - Respuesta de GoSocket
+        /// - XML de Hacienda
         /// Retorna la ruta completa del archivo creado, o string.Empty si no hay OutputPath configurado.
         /// </summary>
-        private string GuardarXmlEnDisco(DocumentoCola item, string tipo, DataRow r0, string xml,string Prefijo)
+        private string GuardarXmlEnDisco(DocumentoCola item, string tipo, DataRow r0, string xml, string prefijo)
         {
             // Si no se configuró OutputPath, no se guarda (no se considera error).
             if (string.IsNullOrWhiteSpace(_gosocketOptions.OutputPath))
                 return string.Empty;
 
-            // Usa consecutivo o clave si viene, si no usa QueueId+DocNum para nombre estable.
-            var consecutivo = GetString(r0, "Consecutivo");
-            var clave = GetString(r0, "Clave");
+            // Consecutivo interno de SAP para nombrar la carpeta.
+            // Ajustá el nombre de la columna si en tu DataRow viene con otro nombre.
+            var consecutivoInternoSap = GetString(r0, "DocNum");
 
-            var nombreBase =
-                !string.IsNullOrWhiteSpace(consecutivo) ? consecutivo :
-                !string.IsNullOrWhiteSpace(clave) ? clave :
-                $"{item.DocumentosPendientes_Id}_{item.DocNum}";
+            // Fallback por si no viene DocNum
+            if (string.IsNullOrWhiteSpace(consecutivoInternoSap))
+                consecutivoInternoSap = $"{item.DocumentosPendientes_Id}_{item.DocNum}";
 
-            nombreBase = SanitizeFileName(nombreBase);
+            consecutivoInternoSap = SanitizeFileName(consecutivoInternoSap);
 
-            var carpeta = _gosocketOptions.OutputPath;
+            // Carpeta raíz configurada
+            var carpetaRaiz = _gosocketOptions.OutputPath;
 
             if (_gosocketOptions.CrearSubcarpetaPorTipo)
-                carpeta = Path.Combine(carpeta, tipo);
+                carpetaRaiz = Path.Combine(carpetaRaiz, tipo);
 
-            if (_gosocketOptions.CrearSubcarpetaPorFecha)
-                carpeta = Path.Combine(carpeta, DateTime.Now.ToString("yyyyMMdd"));
+            // Carpeta exclusiva del comprobante
+            var carpetaComprobante = Path.Combine(carpetaRaiz, consecutivoInternoSap);
 
-            Directory.CreateDirectory(carpeta);
+            Directory.CreateDirectory(carpetaComprobante);
 
-            var fullPath = Path.Combine(carpeta, $"{Prefijo}_{nombreBase}.xml");
+            // Nombre del archivo dentro de la carpeta del comprobante
+            var nombreArchivo = $"{prefijo}.xml";
+            var fullPath = Path.Combine(carpetaComprobante, nombreArchivo);
 
             // UTF-8 sin BOM
             var utf8NoBom = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
@@ -265,9 +272,7 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
 
             return fullPath;
         }
- 
-
-    private static string GetString(DataRow r, string col)
+        private static string GetString(DataRow r, string col)
         {
             if (r.Table.Columns.Contains(col) && r[col] != DBNull.Value)
                 return Convert.ToString(r[col])?.Trim() ?? string.Empty;
@@ -330,6 +335,68 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
         /// <summary>
         /// Consulta estados de Hacienda vía GoSocket.
         /// </summary>
+        //public async Task ProcesarSeguimientoHaciendaAsync(int batchSize, CancellationToken ct)
+        //{
+        //    var pendientes = await _repositorioCola.ObtenerPendientesSeguimientoAsync(
+        //        STATUS_WAITING_HACIENDA,
+        //        batchSize,
+        //        ct);
+
+        //    foreach (var doc in pendientes)
+        //    {
+        //        if (string.IsNullOrWhiteSpace(doc.GoSocket_TrackId))
+        //            continue;
+
+        //        try
+        //        {
+        //            var peticion = new PeticionGetDocument
+        //            {
+        //                CodigoDocumento = doc.GoSocket_TrackId.ToString(),
+        //                CodigoPais = "CR"
+        //            };
+
+        //            var respuesta = await _clienteGosocket.ObtenerDocumentoAsync(peticion, ct);
+        //            var json = JsonSerializer.Serialize(respuesta);
+
+        //            var estado = TryParseEstadoHaciendaDesdeJson(json);
+        //            var esFinal = EstadosFinalesHacienda.Contains(estado ?? string.Empty);
+
+        //            if (esFinal)
+        //            {
+        //                await _repositorioEstados.MarcarDoneAsync(
+        //                    doc.DocumentosPendientes_Id,
+        //                    ct);
+        //            }
+        //            else
+        //            {
+        //                await _repositorioEstados.ActualizarSeguimientoHaciendaAsync(
+        //                    doc.DocumentosPendientes_Id,
+        //                    estado,
+        //                    json,
+        //                    esFinal,
+        //                    10,
+        //                    ct);
+        //            }
+
+              
+        //        }
+        //        catch (Exception ex)
+        //        {
+        //            _logger.LogError(ex, "Error en seguimiento. DocId={DocId}", doc.DocumentosPendientes_Id);
+
+        //            await _repositorioEstados.MarcarRetryOFalloAsync(
+        //                doc.DocumentosPendientes_Id,
+        //                ex.Message,
+        //                10,
+        //                ct);
+        //        }
+        //    }
+        //}
+
+
+        /// <summary>
+        /// Consulta estados de Hacienda vía GoSocket.
+        /// </summary>
         public async Task ProcesarSeguimientoHaciendaAsync(int batchSize, CancellationToken ct)
         {
             var pendientes = await _repositorioCola.ObtenerPendientesSeguimientoAsync(
@@ -346,21 +413,37 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                 {
                     var peticion = new PeticionGetDocument
                     {
-                        CodigoDocumento = doc.GoSocket_TrackId.ToString(),
+                        CodigoDocumento = doc.GoSocket_TrackId, // validar si este campo debe ser GlobalDocumentId o la clave
                         CodigoPais = "CR"
                     };
 
                     var respuesta = await _clienteGosocket.ObtenerDocumentoAsync(peticion, ct);
-                    var json = JsonSerializer.Serialize(respuesta);
 
-                    var estado = TryParseEstadoHaciendaDesdeJson(json);
-                    var esFinal = EstadosFinalesHacienda.Contains(estado ?? string.Empty);
+                    if (!respuesta.Exitoso || respuesta.Datos == null)
+                    {
+                        await _repositorioEstados.ActualizarSeguimientoHaciendaAsync(
+                            doc.DocumentosPendientes_Id,
+                            "SIN_RESPUESTA",
+                            JsonSerializer.Serialize(respuesta),
+                            false,
+                            10,
+                            ct);
+                        continue;
+                    }
+
+                    var datos = respuesta.Datos;
+
+                    var estado = datos.Estado;              // o datos.EstadoAutoridad, según el DTO real
+                    var json = JsonSerializer.Serialize(datos);
+
+                    var esFinal =
+                        string.Equals(estado, "ACEPTADO", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(estado, "RECHAZADO", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(estado, "BAD_REQUEST", StringComparison.OrdinalIgnoreCase);
 
                     if (esFinal)
                     {
-                        await _repositorioEstados.MarcarDoneAsync(
-                            doc.DocumentosPendientes_Id,
-                            ct);
+                        await _repositorioEstados.MarcarDoneAsync(doc.DocumentosPendientes_Id, ct);
                     }
                     else
                     {
@@ -372,13 +455,9 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                             10,
                             ct);
                     }
-
-              
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Error en seguimiento. DocId={DocId}", doc.DocumentosPendientes_Id);
-
                     await _repositorioEstados.MarcarRetryOFalloAsync(
                         doc.DocumentosPendientes_Id,
                         ex.Message,
@@ -388,7 +467,6 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
             }
         }
 
-    
         private static string? TryParseGlobalDocumentIdDesdeJson(string json)
         {
             try
@@ -412,16 +490,34 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
             }
         }
 
-        private static string? TryParseEstadoHaciendaDesdeJson(string json)
-        {
-            try
-            {
-                using var doc = JsonDocument.Parse(json);
-                return doc.RootElement.TryGetProperty("Estado", out var v)
-                    ? v.GetString()
-                    : null;
-            }
-            catch { return null; }
-        }
+        //private static string? TryParseEstadoHaciendaDesdeJson(string json)
+        //{
+        //    try
+        //    {
+        //        using var doc = JsonDocument.Parse(json);
+        //        return doc.RootElement.TryGetProperty("Estado", out var v)
+        //            ? v.GetString()
+        //            : null;
+        //    }
+        //    catch { return null; }
+        //}
+        //private static string? TryParseEstadoHaciendaDesdeJson(string json)
+        //{
+        //    try
+        //    {
+        //        using var doc = JsonDocument.Parse(json);
+
+        //        if (!doc.RootElement.TryGetProperty("Datos", out var datos))
+        //            return null;
+
+        //        return datos.TryGetProperty("Estado", out var estado)
+        //            ? estado.GetString()
+        //            : null;
+        //    }
+        //    catch
+        //    {
+        //        return null;
+        //    }
+        //}
     }
 }

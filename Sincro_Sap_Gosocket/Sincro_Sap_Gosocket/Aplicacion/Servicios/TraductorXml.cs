@@ -165,8 +165,8 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                     DomFiscalRcp = new GosocketDomFiscal
                     {
                         Departamento = GetString(r0, "Receptor_Provincia"),
-                        Distrito = GetString(r0, "Receptor_Canton"),
-                        Ciudad = GetString(r0, "Receptor_Distrito"),
+                        Distrito = GetString(r0, "Receptor_Distrito"),
+                        Ciudad = GetString(r0, "Receptor_Canton"),
                         Municipio = GetString(r0, "Receptor_Barrio"),
                         Calle = GetString(r0, "Receptor_OtrasSenas"),
                         //Referencia = GetString(r0, "Receptor_OtrasSenasExtranjero")
@@ -302,13 +302,13 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
             //if (!string.IsNullOrWhiteSpace(ImpuestoAsumido) && ImpuestoAsumido.Trim() != "0")
                 AddExtraSiTieneValor(extras, "ImpuestoAsumido", ImpuestoAsumido.Trim());
 
-            //if (!string.IsNullOrWhiteSpace(RegistroMedicamento) && RegistroMedicamento.Trim() != "0")
+            if (!string.IsNullOrWhiteSpace(RegistroMedicamento) && RegistroMedicamento.Trim() != "0")
                 AddExtraSiTieneValor(extras, "RegistroMedicamento", RegistroMedicamento.Trim());
 
-            //if (!string.IsNullOrWhiteSpace(FormaFarmaceutica) && FormaFarmaceutica.Trim() != "0")
+            if (!string.IsNullOrWhiteSpace(FormaFarmaceutica) && FormaFarmaceutica.Trim() != "0")
                 AddExtraSiTieneValor(extras, "FormaFarmaceutica", FormaFarmaceutica.Trim());
 
-            //if (!string.IsNullOrWhiteSpace(ImpuestoAsumidoEmisorFabrica) && ImpuestoAsumidoEmisorFabrica.Trim() != "0")
+            if (!string.IsNullOrWhiteSpace(ImpuestoAsumidoEmisorFabrica) && ImpuestoAsumidoEmisorFabrica.Trim() != "0")
                 AddExtraSiTieneValor(extras, "ImpuestoAsumidoEmisorFabrica", ImpuestoAsumidoEmisorFabrica.Trim());
 
             return extras;
@@ -386,7 +386,7 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                 imp.Exoneracion = new GosocketExoneracion
                 {
                     // Estos nombres ajústelos a sus clases, pero la idea es:
-                    PorcentajeCompra = porcExo,
+                    PorcentajeCompra =  GetDecimal(row, "Exoneracion_IvaExonerado", 0),
                     MontoImpuesto = montoExo,
 
                     // Si usted ya trae estos datos del SP, métalos aquí:
@@ -640,23 +640,26 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
 
         private static GosocketTotales ConstruirTotalesDesdeSp(DataRow r0)
         {
-            var tot = new GosocketTotales
+            var GTotales = new GosocketTotales
             {
                 Moneda = GetString(r0, "ResumenFactura_CodigoMoneda"),
                 FctConv = GetDecimal(r0, "ResumenFactura_TipoCambio", 0m),
-                SubTotal = GetDecimal(r0, "ResumenFactura_TotalVenta", 0m),
+                SubTotal = GetDecimal(r0, "ResumenFactura_TotalGravado", 0m),
+                MntExe = GetDecimal(r0, "ResumenFactura_TotalExento", 0m),
+                ImporteNoGravado = GetDecimal(r0, "ResumenFactura_TotalExonerado", 0m),
+                SaldoAnterior = GetDecimal(r0, "ResumenFactura_TotalVenta", 0m),
                 MntDcto = GetDecimal(r0, "ResumenFactura_TotalDescuentos", 0m),
                 MntBase = GetDecimal(r0, "ResumenFactura_TotalVentaNeta", 0m),
                 MntImp = GetDecimal(r0, "ResumenFactura_TotalImpuesto", 0m),
+                ImporteOtrosTributos = GetDecimal(r0, "ResumenFactura_TotalIVADevuelto", 0m),
+                MntRcgo = GetDecimal(r0, "ResumenFactura_TotalOtrosCargos", 0m),
+
                 VlrPagar = GetDecimal(r0, "ResumenFactura_TotalComprobante",
                     GetDecimal(r0, "ResumenFactura_TotalVentaNeta", 0m) + GetDecimal(r0, "ResumenFactura_TotalImpuesto", 0m)
                 ),
+               
+               //TotalImpAsumEmisorFabrica            
                 VlrPalabras = "",
-                MntExe =  GetDecimal(r0, "ResumenFactura_TotalExento", 0m),
-                ImporteNoGravado = GetDecimal(r0, "ResumenFactura_TotalExonerado", 0m),
-                SaldoAnterior = GetDecimal(r0, "ResumenFactura_TotalVenta", 0m),
-                ImporteOtrosTributos = GetDecimal(r0, "ResumenFactura_TotalIVADevuelto", 0m),
-                MntRcgo = GetDecimal(r0, "ResumenFactura_TotalOtrosCargos", 0m),
             };
 
             var TotalServGravados = GetDecimal(r0, "ResumenFactura_TotalServGravados", 0m);
@@ -673,8 +676,7 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
             // var otro9 = GetDecimal(r0, "ResumenFactura_AlgoMas", 0m);
 
             var list = new List<GosocketTotSubMonto>();
-
-            
+                        
             AddTotSubMonto(list, 0, TotalServGravados); // TotalServGravados
             AddTotSubMonto(list, 0, TotalServExentos); // TotalServExentos
             AddTotSubMonto(list, 0, TotalServExonerado); // TotalServExonerado
@@ -686,12 +688,12 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
 
             // AddTotSubMonto(list, COD_OTRO_9, otro9);  // [9] si aplica
 
-            tot.TotSubMonto = list.Count > 0 ? list : null;
+            GTotales.TotSubMonto = list.Count > 0 ? list : null;
 
-            AddExtra(tot.ExtraInfoTotal, "TotalNoSujeto", GetString(r0, "ResumenFactura_TotalNoSujeto"));
-            AddExtra(tot.ExtraInfoTotal, "TotalImpAsumFabrica", GetString(r0, "DetalleServicio_IVACobradoFabrica"));
+            AddExtra(GTotales.ExtraInfoTotal, "TotalNoSujeto", GetString(r0, "ResumenFactura_TotalNoSujeto"));
+            AddExtra(GTotales.ExtraInfoTotal, "TotalImpAsumFabrica", GetString(r0, "DetalleServicio_IVACobradoFabrica"));
 
-            return tot;
+            return GTotales;
         }
 
         private static void AddTotSubMonto(List<GosocketTotSubMonto> list, int codigo, decimal monto)
