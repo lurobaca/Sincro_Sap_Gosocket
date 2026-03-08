@@ -7,6 +7,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Security.AccessControl;
 using System.Text;
 using System.Xml;
 using System.Xml.Serialization;
@@ -71,14 +72,14 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
 
             var totales = ConstruirTotalesDesdeSp(r0);
             var impuestos = ConstruirImpuestosEncabezadoDesdeSp(r0, totales.MntImp);
-
+            var TipoComprobante = GetString(r0, "TipoComprobante", tipoDocumento);
             var encabezado = new GosocketEncabezado
             {
                 IdDoc = new GosocketIdDoc
                 {
                     Version = "4.4",
                     Ambiente = "Sandbox",
-                    Tipo = MapTipoDocumento(GetString(r0, "TipoComprobante", tipoDocumento)),
+                    Tipo = TipoComprobante,
                     Numero = GetString(r0, "CodSeguridad"),      // si viene NULL, lo genera su sistema/GoSocket
                     NumeroInterno =  GetString(r0, "CodSeguridad"),   // si usa el ERP interno
                     FechaEmis = ToIso8601(GetDate(r0, "Fecha")),   // su SP trae datetimeoffset textual
@@ -196,6 +197,7 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
             //AddExtra(encabezado.Receptor.ExtrInfoDoc, "CondicionVenta", GetString(r0, "CondicionVenta"));
             //AddExtra(encabezado.Receptor.ExtrInfoDoc, "PlazoCredito", GetString(r0, "PlazoCredito"));
             //AddExtra(encabezado.ExtrInfoDoc, "CodigoActividadEconomica", GetString(r0, "CodigoActividadEconomica"));
+ 
 
             return encabezado;
         }

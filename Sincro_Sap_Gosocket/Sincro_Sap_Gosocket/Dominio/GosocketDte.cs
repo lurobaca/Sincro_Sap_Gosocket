@@ -82,7 +82,10 @@ namespace Sincro_Sap_Gosocket.Dominio
         //public bool ShouldSerializeExtrInfoDoc()
         //    => ExtrInfoDoc != null && ExtrInfoDoc.Count > 0;
 
-           
+         public bool ShouldSerializeReceptor()
+        {
+            return IdDoc?.Tipo != "04"; // 04 = Tiquete electrónico
+        }
     }
 
     // =========================
