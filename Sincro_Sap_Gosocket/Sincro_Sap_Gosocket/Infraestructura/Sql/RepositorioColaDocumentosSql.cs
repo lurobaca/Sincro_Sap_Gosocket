@@ -160,8 +160,6 @@ namespace Sincro_Sap_Gosocket.Infraestructura.Sql
 
         public async Task<string> ActualizarConsecutivoHaciendaAsync(string tipo , CancellationToken ct)
         {
-          
-
             if (!TipoAColumna.TryGetValue(tipo, out var columna))
                 throw new ArgumentException($"Tipo no válido: {tipo}", nameof(tipo));
 
@@ -186,6 +184,40 @@ namespace Sincro_Sap_Gosocket.Infraestructura.Sql
                 throw new InvalidOperationException("No se pudo actualizar/obtener el consecutivo.");
 
             return Convert.ToString(result)!;
+        }
+
+        public async Task<string> ActualizarClaveDocumentoPendienteAsync(long documentoPendienteId, string clave, CancellationToken ct)
+        {
+            try
+            {
+                if (documentoPendienteId <= 0)
+                    throw new ArgumentOutOfRangeException(nameof(documentoPendienteId), "El id del documento pendiente no es válido.");
+
+                if (string.IsNullOrWhiteSpace(clave))
+                    throw new ArgumentException("La clave no puede venir vacía.", nameof(clave));
+
+                var claveEscapada = clave.Replace("'", "''");
+
+                var sql = $@"
+                        UPDATE [Integration].[DocumentosPendientes]
+                        SET Clave = '{claveEscapada}'
+                        OUTPUT INSERTED.Clave
+                        WHERE DocumentosPendientes_Id = {documentoPendienteId};";
+
+                var result = await EjecutarScalarAsync(sql, ct);
+
+                if (result is null || result == DBNull.Value)
+                    throw new InvalidOperationException("No se pudo actualizar/obtener la clave del documento pendiente.");
+
+                return Convert.ToString(result)!;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "Error en ActualizarClaveDocumentoPendienteAsync. DocumentoPendienteId={DocumentoPendienteId}",
+                    documentoPendienteId);
+                throw;
+            }
         }
 
         public async Task<bool> LockearAsync(int documentosPendientesId, string lockedBy, CancellationToken ct)

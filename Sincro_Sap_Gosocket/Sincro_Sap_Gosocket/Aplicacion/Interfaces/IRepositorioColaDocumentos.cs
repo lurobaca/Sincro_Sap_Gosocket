@@ -24,6 +24,6 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Interfaces
         /// </summary>
         Task<string> ActualizarConsecutivoHaciendaAsync(string tipo , CancellationToken ct);
 
-
+        Task<string> ActualizarClaveDocumentoPendienteAsync(long documentoPendienteId, string clave, CancellationToken ct);
     }
 }

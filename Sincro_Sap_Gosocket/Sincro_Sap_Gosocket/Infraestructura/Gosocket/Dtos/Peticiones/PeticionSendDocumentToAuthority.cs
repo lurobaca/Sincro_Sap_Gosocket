@@ -36,11 +36,11 @@ namespace Sincro_Sap_Gosocket.Infraestructura.Gosocket.Dtos.Peticiones
         //[JsonProperty("async")]
         //public bool Asincrono { get; set; } = false;
 
-        ///// <summary>
-        ///// Folio asignado al documento (opcional)
-        ///// </summary>
-        //[JsonProperty("folio", NullValueHandling = NullValueHandling.Ignore)]
-        //public int? Folio { get; set; }
+        /// <summary>
+        /// Folio asignado al documento (opcional)
+        /// </summary>
+        [JsonProperty("folio", NullValueHandling = NullValueHandling.Ignore)]
+        public int? Folio { get; set; }
 
         ///// <summary>
         ///// RUT/NIT/CUI del emisor (opcional)

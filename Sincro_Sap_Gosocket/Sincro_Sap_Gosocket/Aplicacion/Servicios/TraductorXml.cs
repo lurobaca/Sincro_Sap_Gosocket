@@ -42,15 +42,14 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
 
             var idDocumento = GetString(r0, "CodSeguridad"); // o "Numero", o el campo que tenga 1000062509
 
-
             var dte = new GosocketDte
             {
                 Documento = new GosocketDocumento
                 {
                     ID = idDocumento,
                     Encabezado = ConstruirEncabezadoDesdeSp(tipoDocumento, r0),
-                    Detalle = ConstruirDetalleDesdeSp(datos),
-                    //Referencia = new List<GosocketReferencia>(),
+                    Detalle = ConstruirDetalleDesdeSp(datos), 
+                    Referencia = ConstruirReferenciasDesdeSp(datos),
                     Otros = null
                 }
             };
@@ -69,6 +68,9 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
             var Emisor_nombreComercial = GetString(r0, "Emisor_NombreComercial"); // MH: Emisor/NombreComercial
             var Receptor_nombreComercial = GetString(r0, "Receptor_NombreComercial"); // MH: Emisor/NombreComercial
             var Receptor_OtrasSenasExtranjero = GetString(r0, "Receptor_OtrasSenasExtranjero"); // MH: Emisor/NombreComercial
+
+            var referenciaEsTiquete = GetInt(r0, "Referencia_EsTiquete", 0) == 1;
+
 
             var totales = ConstruirTotalesDesdeSp(r0);
             var impuestos = ConstruirImpuestosEncabezadoDesdeSp(r0, totales.MntImp);
@@ -146,7 +148,7 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                     //    }
                     //},
                 },
-                Receptor = new GosocketReceptor
+                Receptor = referenciaEsTiquete ? null : new GosocketReceptor 
                 {  
                     NmbRecep = GetString(r0, "Receptor_Nombre"),                 
                     DocRecep = new GosocketDocRecep
@@ -234,7 +236,7 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                 DscItem = GetString(row, "DetalleServicio_Detalle"),
                 QtyItem = GetDecimal(row, "DetalleServicio_Cantidad"),
                 UnmdItem = GetString(row, "DetalleServicio_UnidadMedida"),
-                IndListaItem = null,//GetString(row, "DetalleServicio_TipoTransaccion"),
+                IndListaItem = GetString(row, "DetalleServicio_TipoTransaccion"), 
                 UnidadMedidaComercial = GetString(row, "DetalleServicio_UnidadMedidaComercial"),          
                 PrcNetoItem = GetDecimal(row, "DetalleServicio_PrecioUnitario"),
                 MontoBrutoItem = GetDecimal(row, "DetalleServicio_MontoTotal"),
@@ -710,7 +712,41 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                 MontoConcepto = monto
             });
         }
+        private static List<GosocketReferencia> ConstruirReferenciasDesdeSp(DataTable datos)
+        {
+            var referencias = new List<GosocketReferencia>();
+            var vistos = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
+            foreach (DataRow row in datos.Rows)
+            {
+                var tipoDoc = GetString(row, "Referencia_TipoDoc");
+                var numero = GetString(row, "Referencia_Numero");
+                var fecha = GetString(row, "Referencia_FechaEmision");
+                var codigo = GetString(row, "Referencia_Codigo");
+                var razon = GetString(row, "Referencia_Razon");
+
+                if (string.IsNullOrWhiteSpace(tipoDoc) || string.IsNullOrWhiteSpace(numero))
+                    continue;
+
+                var llave = $"{tipoDoc}|{numero}|{codigo}";
+                if (!vistos.Add(llave))
+                    continue;
+
+                referencias.Add(new GosocketReferencia
+                {
+                    TpoDocRef = tipoDoc,
+                    NumeroRef = numero,
+                    FechaRef = fecha,
+                    CodRef = codigo,
+                    RazonRef = razon
+                });
+
+                if (referencias.Count == 10)
+                    break;
+            }
+
+            return referencias;
+        }
         private static GosocketPersonalizados ConstruirPersonalizados(DataRow r0)
         {
             var p = new GosocketPersonalizados();

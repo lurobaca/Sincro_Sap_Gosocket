@@ -120,6 +120,15 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                     if (datos.Rows.Count == 0)
                         throw new InvalidOperationException($"El SP no devolvió filas para QueueId={doc.DocumentosPendientes_Id} DocNum={doc.DocNum}.");
 
+                    var claveComprobante = ObtenerClaveDesdeResultadoSp(datos);
+
+                    if (!string.IsNullOrWhiteSpace(claveComprobante))
+                    {
+                        await _repositorioCola.ActualizarClaveDocumentoPendienteAsync(
+                            doc.DocumentosPendientes_Id,
+                            claveComprobante,
+                            ct);
+                    }
 
                     // 3) Traducir (ideal: el traductor sabe el tipo)
                     // AJUSTA AQUÍ si tu ITraductorXml actualmente solo recibe 1 parámetro.
@@ -140,7 +149,8 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                         Async = true,
                         Mapping = "11111111-1111-1111-1111-111111111111",
                         Sign=true,
-                        DefaultCertificate =false
+                        DefaultCertificate =false,
+                        Folio= doc.DocNum
                     };
 
                     // 3) Enviar
@@ -213,7 +223,24 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                 }
             }
         }
+        private static string ObtenerClaveDesdeResultadoSp(DataTable datosSp)
+        {
+            if (datosSp == null)
+                throw new ArgumentNullException(nameof(datosSp));
 
+            if (datosSp.Rows.Count == 0)
+                return string.Empty;
+
+            if (!datosSp.Columns.Contains("Clave"))
+                return string.Empty;
+
+            var valorClave = datosSp.Rows[0]["Clave"];
+
+            if (valorClave == null || valorClave == DBNull.Value)
+                return string.Empty;
+
+            return Convert.ToString(valorClave)?.Trim() ?? string.Empty;
+        }
         static string NormalizarXml(string xml)
         {
             if (string.IsNullOrWhiteSpace(xml)) return xml;
@@ -298,7 +325,7 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
             // 1) Elegir SP por tipo
             var spName = item.TipoCE switch
             {
-                "FE" => "SP_Consulta_FE_FES_V44",
+                "FE" or "TE" => "SP_Consulta_FE_FES_V44",
                 "NC" => "SP_Consulta_NC_NCS_V44",
                 "ND" => "SP_Consulta_ND_NDS_V44",
                 "FEC" => "SP_Consulta_FEC_V44",

@@ -143,7 +143,16 @@ namespace Sincro_Sap_Gosocket.Dominio
         public bool ShouldSerializePagos() => Pagos != null && Pagos.Count > 0;
         public bool ShouldSerializeNumeroInterno() => !string.IsNullOrWhiteSpace(NumeroInterno);
         public bool ShouldSerializeContenidoTC() => !string.IsNullOrWhiteSpace(ContenidoTC);
+        public bool ShouldSerializeTermPagoCdg()
+        {
+            if (string.IsNullOrWhiteSpace(TermPagoCdg))
+                return false;
 
+            if (TermPagoCdg == "0")
+                return false;
+
+            return true;
+        }
     }
 
     // =========================
