@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using Sincro_Sap_Gosocket.Aplicacion.Interfaces;
 using Sincro_Sap_Gosocket.Configuracion;
 using Sincro_Sap_Gosocket.Dominio.Entidades;
+using Sincro_Sap_Gosocket.Dominio.Enumeraciones;
 using Sincro_Sap_Gosocket.Infraestructura.Gosocket.Dtos.Comun;
 using Sincro_Sap_Gosocket.Infraestructura.Gosocket.Dtos.Peticiones;
 using System;
@@ -20,6 +21,7 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
     public class ServicioProcesamientoDocumentos : IServicioProcesamientoDocumentos
     {
         private const string STATUS_WAITING_HACIENDA = "WAITING_HACIENDA";
+        private readonly IServicioActualizacionSap _servicioActualizacionSap;
 
         private static readonly HashSet<string> EstadosFinalesHacienda =
             new(StringComparer.OrdinalIgnoreCase)
@@ -37,25 +39,26 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
         private readonly ITraductorXml _traductor;
         private readonly OpcionesGosocket _gosocketOptions;
 
+     
         public ServicioProcesamientoDocumentos(
-            ILogger<ServicioProcesamientoDocumentos> logger,
-            IRepositorioColaDocumentos repositorioCola,
-            IRepositorioEstados repositorioEstados,
-            IEjecutorProcedimientos sp,
-            IClienteGosocket clienteGosocket,
-            ITraductorXml traductor,
-            IOptions<OpcionesGosocket> gosocketOptions)
+        ILogger<ServicioProcesamientoDocumentos> logger,
+        IRepositorioColaDocumentos repositorioCola,
+        IRepositorioEstados repositorioEstados,
+        IEjecutorProcedimientos sp,
+        IClienteGosocket clienteGosocket,
+        ITraductorXml traductor,
+        IServicioActualizacionSap servicioActualizacionSap,
+        IOptions<OpcionesGosocket> gosocketOptions)
         {
             _logger = logger;
             _repositorioCola = repositorioCola;
             _repositorioEstados = repositorioEstados;
             _clienteGosocket = clienteGosocket;
             _sp = sp;
-            _traductor = traductor ;
+            _traductor = traductor;
+            _servicioActualizacionSap = servicioActualizacionSap;
 
             _gosocketOptions = gosocketOptions?.Value ?? throw new ArgumentNullException(nameof(gosocketOptions));
-
-            // Valida que existan credenciales/URLs (OAuth o Basic). OutputPath no es obligatorio aquí.
             _gosocketOptions.ValidarConfiguracion(exigirOutputPath: false);
         }
 
@@ -202,6 +205,23 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                         null,
                         json,
                         ct);
+
+                    var actualizacionSapEnvio = new ActualizacionEstadoHacienda
+                    {
+                        TipoDocumento = MapearTipoDocumentoSap(doc.TipoCE),
+                        DocEntry = doc.DocEntry,
+                        EstadoHacienda = "ENVIADO",
+                        MensajeHacienda = "Documento enviado a GoSocket, pendiente respuesta de Hacienda",
+                        Clave = string.IsNullOrWhiteSpace(claveComprobante) ? null : claveComprobante,
+                        FechaRespuestaTexto = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
+                        CampoEstado = "U_EstadoHacienda",
+                        CampoMensaje = "U_RespuestaHacienda",
+                        CampoClave = "U_ClaveHacienda",
+                        CampoFechaRespuesta = "U_FechaRespHacienda"
+                    };
+
+                    //PENDIENTE DE HABILITAR NO BORRAR
+                    //await _servicioActualizacionSap.ActualizarEstadoHaciendaAsync(actualizacionSapEnvio, ct);
 
                     _logger.LogInformation(
                         "Documento enviado a GoSocket. DocId={DocId} GlobalDocumentId={GlobalDocumentId}",
@@ -405,7 +425,7 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
         //                    ct);
         //            }
 
-              
+
         //        }
         //        catch (Exception ex)
         //        {
@@ -440,7 +460,7 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                 {
                     var peticion = new PeticionGetDocument
                     {
-                        CodigoDocumento = doc.GoSocket_TrackId, // validar si este campo debe ser GlobalDocumentId o la clave
+                        CodigoDocumento = doc.GoSocket_TrackId,
                         CodigoPais = "CR"
                     };
 
@@ -455,13 +475,13 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                             false,
                             10,
                             ct);
+
                         continue;
                     }
 
                     var datos = respuesta.Datos;
-
-                    var estado = datos.Estado;              // o datos.EstadoAutoridad, según el DTO real
-                    var json = JsonSerializer.Serialize(datos);
+                    var estado = (datos.Estado ?? string.Empty).Trim();
+                    var json = JsonSerializer.Serialize(datos); 
 
                     var esFinal =
                         string.Equals(estado, "ACEPTADO", StringComparison.OrdinalIgnoreCase) ||
@@ -471,6 +491,22 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                     if (esFinal)
                     {
                         await _repositorioEstados.MarcarDoneAsync(doc.DocumentosPendientes_Id, ct);
+
+                        var actualizacionSap = new ActualizacionEstadoHacienda
+                        {
+                            TipoDocumento = MapearTipoDocumentoSap(doc.TipoCE),
+                            DocEntry = doc.DocEntry,
+                            EstadoHacienda = estado,
+                            MensajeHacienda = ObtenerMensajeRespuestaParaSap(datos, estado),
+                            Clave = null,
+                            FechaRespuestaTexto = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
+                            CampoEstado = "U_EstadoHacienda",
+                            CampoMensaje = "U_RespuestaHacienda",
+                            CampoClave = "U_ClaveHacienda",
+                            CampoFechaRespuesta = "U_FechaRespHacienda"
+                        };
+                        //PENDIENTE DE HABILITAR NO BORRAR
+                        //await _servicioActualizacionSap.ActualizarEstadoHaciendaAsync(actualizacionSap, ct);
                     }
                     else
                     {
@@ -485,6 +521,12 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                 }
                 catch (Exception ex)
                 {
+                    _logger.LogError(ex,
+                        "Error en seguimiento Hacienda. QueueId={QueueId} DocEntry={DocEntry} TipoCE={TipoCE}",
+                        doc.DocumentosPendientes_Id,
+                        doc.DocEntry,
+                        doc.TipoCE);
+
                     await _repositorioEstados.MarcarRetryOFalloAsync(
                         doc.DocumentosPendientes_Id,
                         ex.Message,
@@ -492,6 +534,87 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                         ct);
                 }
             }
+        }
+        private static string ObtenerMensajeRespuestaParaSap(object datosRespuesta, string estado)
+        {
+            if (datosRespuesta == null)
+                return LimitarTexto($"Estado: {estado}", 250);
+
+            try
+            {
+                var json = JsonSerializer.Serialize(datosRespuesta);
+                using var doc = JsonDocument.Parse(json);
+                var root = doc.RootElement;
+
+                var mensajes = new List<string>();
+
+                if (root.TryGetProperty("Description", out var description))
+                {
+                    var texto = description.GetString();
+                    if (!string.IsNullOrWhiteSpace(texto))
+                        mensajes.Add(texto.Trim());
+                }
+
+                if (root.TryGetProperty("Mensaje", out var mensaje))
+                {
+                    var texto = mensaje.GetString();
+                    if (!string.IsNullOrWhiteSpace(texto))
+                        mensajes.Add(texto.Trim());
+                }
+
+                if (root.TryGetProperty("Messages", out var messages) &&
+                    messages.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var item in messages.EnumerateArray())
+                    {
+                        var texto = item.GetString();
+                        if (!string.IsNullOrWhiteSpace(texto))
+                            mensajes.Add(texto.Trim());
+                    }
+                }
+
+                if (root.TryGetProperty("Errors", out var errors) &&
+                    errors.ValueKind == JsonValueKind.Array)
+                {
+                    foreach (var item in errors.EnumerateArray())
+                    {
+                        if (item.ValueKind == JsonValueKind.String)
+                        {
+                            var texto = item.GetString();
+                            if (!string.IsNullOrWhiteSpace(texto))
+                                mensajes.Add(texto.Trim());
+                        }
+                    }
+                }
+
+                var detalle = string.Join(" | ", mensajes.Where(x => !string.IsNullOrWhiteSpace(x)));
+
+                if (string.IsNullOrWhiteSpace(detalle))
+                    detalle = $"Estado: {estado}";
+
+                return LimitarTexto(detalle, 250);
+            }
+            catch
+            {
+                return LimitarTexto($"Estado: {estado}", 250);
+            }
+        }
+
+        private static string LimitarTexto(string texto, int maximo)
+        {
+            if (string.IsNullOrWhiteSpace(texto))
+                return string.Empty;
+
+            texto = texto.Trim();
+            return texto.Length <= maximo ? texto : texto.Substring(0, maximo);
+        }
+        private static string ResumirRespuestaSap(string estado, string json)
+        {
+            var texto = $"Estado={estado}";
+            if (!string.IsNullOrWhiteSpace(json))
+                texto += " | Respuesta recibida de Hacienda";
+
+            return texto.Length > 250 ? texto.Substring(0, 250) : texto;
         }
 
         private static string? TryParseGlobalDocumentIdDesdeJson(string json)
@@ -516,7 +639,18 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                 return null;
             }
         }
-
+        private static TipoDocumentoSap MapearTipoDocumentoSap(string tipoCe)
+        {
+            return (tipoCe ?? string.Empty).Trim().ToUpperInvariant() switch
+            {
+                "FE" => TipoDocumentoSap.Factura,
+                "TE" => TipoDocumentoSap.Factura,
+                "FEC" => TipoDocumentoSap.Factura,
+                "NC" => TipoDocumentoSap.NotaCredito,
+                "ND" => TipoDocumentoSap.NotaDebito,
+                _ => throw new InvalidOperationException($"TipoCE no soportado para SAP: {tipoCe}")
+            };
+        }
         //private static string? TryParseEstadoHaciendaDesdeJson(string json)
         //{
         //    try

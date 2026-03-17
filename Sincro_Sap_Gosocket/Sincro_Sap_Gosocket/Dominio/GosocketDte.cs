@@ -1,4 +1,4 @@
-﻿using Sincro_Sap_Gosocket.Dominio.Enums;
+﻿ 
 using System.Threading;
 using System.Xml.Serialization;
 

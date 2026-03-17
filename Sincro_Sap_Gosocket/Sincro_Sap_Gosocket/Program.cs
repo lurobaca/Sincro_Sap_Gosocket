@@ -1,4 +1,3 @@
-// Sincro_Sap_Gosocket/Program.cs
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
@@ -10,6 +9,7 @@ using Sincro_Sap_Gosocket.Configuracion;
 using Sincro_Sap_Gosocket.Configuracion.OpcionesSql;
 using Sincro_Sap_Gosocket.Infraestructura.Gosocket;
 using Sincro_Sap_Gosocket.Infraestructura.Sql;
+using Sincro_Sap_Gosocket.Infraestructura.Sap;
 using System;
 using System.IO;
 using System.Net.Http.Headers;
@@ -91,13 +91,16 @@ namespace Sincro_Sap_Gosocket
             // 3) SQL
             RegistrarInfraestructuraSql(context, services);
 
-            // 4) Servicios de aplicación
+            // 4) SAP
+            RegistrarServiciosSap(services);
+
+            // 5) Servicios de aplicación
             RegistrarServiciosAplicacion(services);
 
-            // 5) GoSocket (Basic Auth)
+            // 6) GoSocket (Basic Auth)
             RegistrarServiciosGoSocket(services);
 
-            // 6) Worker
+            // 7) Worker
             services.AddHostedService<Worker>();
         }
 
@@ -105,6 +108,7 @@ namespace Sincro_Sap_Gosocket
         {
             services.Configure<OpcionesGosocket>(context.Configuration.GetSection("GoSocket"));
             services.Configure<OpcionesServicio>(context.Configuration.GetSection("ServiceOptions"));
+            services.Configure<OpcionesSap>(context.Configuration.GetSection("Sap"));
 
             // Importante: NO dependa de bind raro para SQL.
             // Aquí solo dejamos registrado OpcionesSql, pero el valor se setea en RegistrarInfraestructuraSql.
@@ -136,6 +140,31 @@ namespace Sincro_Sap_Gosocket
                 Log.Fatal(ex, "Error en configuración de GoSocket (Basic Auth)");
                 throw;
             }
+
+            // SAP
+            var opcionesSap = context.Configuration.GetSection("Sap").Get<OpcionesSap>();
+            if (opcionesSap == null)
+            {
+                Log.Fatal("No se encontró la configuración de Sap en appsettings.json");
+                throw new InvalidOperationException("Falta la sección Sap en appsettings.json");
+            }
+
+            if (string.IsNullOrWhiteSpace(opcionesSap.Servidor))
+                throw new InvalidOperationException("Falta Sap:Servidor en appsettings.json");
+
+            if (string.IsNullOrWhiteSpace(opcionesSap.LicenciaServidor))
+                throw new InvalidOperationException("Falta Sap:LicenciaServidor en appsettings.json");
+
+            if (string.IsNullOrWhiteSpace(opcionesSap.BaseDatos))
+                throw new InvalidOperationException("Falta Sap:BaseDatos en appsettings.json");
+
+            if (string.IsNullOrWhiteSpace(opcionesSap.Usuario))
+                throw new InvalidOperationException("Falta Sap:Usuario en appsettings.json");
+
+            if (string.IsNullOrWhiteSpace(opcionesSap.Clave))
+                throw new InvalidOperationException("Falta Sap:Clave en appsettings.json");
+
+            Log.Information("Configuración SAP validada correctamente");
         }
 
         private static void RegistrarInfraestructuraSql(HostBuilderContext context, IServiceCollection services)
@@ -150,6 +179,12 @@ namespace Sincro_Sap_Gosocket
             services.AddScoped<IRepositorioColaDocumentos, RepositorioColaDocumentosSql>();
             services.AddScoped<IRepositorioEstados, RepositorioEstadosSql>();
             services.AddScoped<IEjecutorProcedimientos, EjecutorProcedimientosSql>();
+        }
+
+        private static void RegistrarServiciosSap(IServiceCollection services)
+        {
+            services.AddScoped<ISapConnectionFactory, SapConnectionFactory>();
+            services.AddScoped<IServicioActualizacionSap, ServicioActualizacionSap>();
         }
 
         private static void RegistrarServiciosAplicacion(IServiceCollection services)

@@ -23,3 +23,4 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Interfaces
         void ValidarConfiguracion();
     }
 }
+

@@ -11,3 +11,6 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Interfaces
         Task<SqlConnection> CreateOpenConnectionAsync(CancellationToken ct);
     }
 }
+
+
+ 
