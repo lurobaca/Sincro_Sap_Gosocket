@@ -21,8 +21,6 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
         private const int COD_TotalServGravados = 1001;
         private const int COD_TotalServExentos = 1002;
         private const int COD_TotalServExonerado = 1003;
-
-
         private const int COD_TotalServNoSujeto = 1006;//1007; 
         private const int COD_TotalMercanciasGravadas = 1007;//1004; 
         private const int COD_TotalMercanciasExentas = 1004;//1005;
@@ -676,11 +674,12 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
             var TotalMercanciasExonerada = GetDecimal(r0, "ResumenFactura_TotalMercanciasExonerada", 0m);
             var TotalMercanciasNoSujeto = GetDecimal(r0, "ResumenFactura_TotalMercanciasNoSujeto", 0m);
 
+
             // Si ocupás un 9no, sacalo del SP (ejemplo)
             // var otro9 = GetDecimal(r0, "ResumenFactura_AlgoMas", 0m);
 
             var list = new List<GosocketTotSubMonto>();
-                        
+
             AddTotSubMonto(list, 0, TotalServGravados); // TotalServGravados
             AddTotSubMonto(list, 0, TotalServExentos); // TotalServExentos
             AddTotSubMonto(list, 0, TotalServExonerado); // TotalServExonerado
@@ -688,7 +687,7 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
             AddTotSubMonto(list, 0, TotalMercanciasExentas); // TotalMercanciasExentas
             AddTotSubMonto(list, 0, TotalMercanciasExonerada); // TotalMercExonerada           
             AddTotSubMonto(list, 0, TotalServNoSujeto); // TotalServNoSujeto
-            AddTotSubMonto(list, 0, TotalMercanciasNoSujeto); // TotalMercanciasNoSujeto
+            AddTotSubMonto(list, 0, TotalMercanciasNoSujeto); // TotalMercanciasNoSujeto 
 
             // AddTotSubMonto(list, COD_OTRO_9, otro9);  // [9] si aplica
 
