@@ -47,6 +47,7 @@ namespace Sincro_Sap_Gosocket.Infraestructura.Sap
                 AsignarUdfSiExiste(documento, actualizacion.CampoMensaje, actualizacion.MensajeHacienda);
                 AsignarUdfSiExiste(documento, actualizacion.CampoClave, actualizacion.Clave);
                 AsignarUdfSiExiste(documento, actualizacion.CampoFechaRespuesta, actualizacion.FechaRespuestaTexto);
+                AsignarUdfSiExiste(documento, actualizacion.Reintenta, "01");
 
                 var resultado = documento.Update();
                 if (resultado != 0)

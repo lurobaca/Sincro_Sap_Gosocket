@@ -217,11 +217,12 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                         CampoEstado = "U_EstadoHacienda",
                         CampoMensaje = "U_RespuestaHacienda",
                         CampoClave = "U_ClaveHacienda",
-                        CampoFechaRespuesta = "U_FechaRespHacienda"
+                        CampoFechaRespuesta = "U_FechaRespHacienda",
+                        Reintenta = "U_Reintenta"
                     };
 
                     //PENDIENTE DE HABILITAR NO BORRAR
-                    //await _servicioActualizacionSap.ActualizarEstadoHaciendaAsync(actualizacionSapEnvio, ct);
+                    await _servicioActualizacionSap.ActualizarEstadoHaciendaAsync(actualizacionSapEnvio, ct);
 
                     _logger.LogInformation(
                         "Documento enviado a GoSocket. DocId={DocId} GlobalDocumentId={GlobalDocumentId}",
