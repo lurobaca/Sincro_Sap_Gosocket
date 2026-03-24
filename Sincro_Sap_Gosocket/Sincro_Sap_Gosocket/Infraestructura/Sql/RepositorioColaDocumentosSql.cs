@@ -1,13 +1,14 @@
 ﻿// Infraestructura/Sql/RepositorioColaDocumentosSql.cs
+using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Logging;
+using Sincro_Sap_Gosocket.Aplicacion.Interfaces;
+using Sincro_Sap_Gosocket.Dominio.Entidades;
+using Sincro_Sap_Gosocket.Infraestructura.Logs;
 using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Data.SqlClient;
-using Microsoft.Extensions.Logging;
-using Sincro_Sap_Gosocket.Aplicacion.Interfaces;
-using Sincro_Sap_Gosocket.Dominio.Entidades;
 
 namespace Sincro_Sap_Gosocket.Infraestructura.Sql
 {
@@ -190,11 +191,15 @@ namespace Sincro_Sap_Gosocket.Infraestructura.Sql
         {
             try
             {
-                if (documentoPendienteId <= 0)
+                if (documentoPendienteId <= 0) {
+                    TrazaArchivo.Escribir($"Ejecuta ActualizarClaveDocumentoPendienteAsync [El id del documento pendiente no es válido.]");
                     throw new ArgumentOutOfRangeException(nameof(documentoPendienteId), "El id del documento pendiente no es válido.");
+                }
 
-                if (string.IsNullOrWhiteSpace(clave))
+                if (string.IsNullOrWhiteSpace(clave)) {
+                    TrazaArchivo.Escribir($"Ejecuta ActualizarClaveDocumentoPendienteAsync [La clave no puede venir vacía.]");
                     throw new ArgumentException("La clave no puede venir vacía.", nameof(clave));
+                } 
 
                 var claveEscapada = clave.Replace("'", "''");
 
@@ -206,13 +211,18 @@ namespace Sincro_Sap_Gosocket.Infraestructura.Sql
 
                 var result = await EjecutarScalarAsync(sql, ct);
 
-                if (result is null || result == DBNull.Value)
+                if (result is null || result == DBNull.Value) {
+                    TrazaArchivo.Escribir($"Ejecuta ActualizarClaveDocumentoPendienteAsync [No se pudo actualizar/obtener la clave del documento pendiente]");
                     throw new InvalidOperationException("No se pudo actualizar/obtener la clave del documento pendiente.");
+                }
+                   
 
                 return Convert.ToString(result)!;
             }
             catch (Exception ex)
             {
+                TrazaArchivo.Escribir($"Error en ActualizarClaveDocumentoPendienteAsync. DocumentoPendienteId={documentoPendienteId} Error :{ex.Message}");
+
                 _logger.LogError(ex,
                     "Error en ActualizarClaveDocumentoPendienteAsync. DocumentoPendienteId={DocumentoPendienteId}",
                     documentoPendienteId);

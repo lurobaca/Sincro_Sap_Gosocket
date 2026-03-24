@@ -52,7 +52,17 @@ namespace Sincro_Sap_Gosocket.Infraestructura.Sap
                 var resultado = documento.Update();
                 if (resultado != 0)
                 {
+
+                   
                     company.GetLastError(out int codigo, out string mensaje);
+
+                    _logger.LogError(
+                       "Error actualizando documento SAP. Tipo: {TipoDocumento}, DocEntry: {DocEntry}, Resultado: {mensaje}",
+                       actualizacion.TipoDocumento,
+                       actualizacion.DocEntry,
+                       mensaje);
+
+
                     throw new InvalidOperationException(
                         $"Error actualizando documento SAP. Código: {codigo}. Mensaje: {mensaje}");
                 }

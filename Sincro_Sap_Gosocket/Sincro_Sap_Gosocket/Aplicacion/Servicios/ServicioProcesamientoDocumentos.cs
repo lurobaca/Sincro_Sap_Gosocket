@@ -15,6 +15,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Sincro_Sap_Gosocket.Infraestructura.Logs;
 
 namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
 {
@@ -103,6 +104,8 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
         /// </exception>
         public async Task ProcesarPendientesAsync(int batchSize, CancellationToken ct)
         {
+            TrazaArchivo.Escribir("Ejecuta ProcesarPendientesAsync / ObtenerPendientesAsync");
+
             var pendientes = await _repositorioCola.ObtenerPendientesAsync(batchSize, ct);
             if (pendientes.Count == 0) return;
 
@@ -113,6 +116,8 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                 try
                 {
 
+                    TrazaArchivo.Escribir($"Procesando comprobante DocNum={doc.DocNum} Tipo={doc.TipoCE} " );
+
                     _logger.LogInformation("Procesando QueueId={QueueId} ObjType={ObjType} DocEntry={DocEntry} DocSubType={DocSubType}",
                              doc.DocumentosPendientes_Id  , doc.ObjType, doc.DocEntry, doc.DocSubType);
 
@@ -120,29 +125,37 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                     // 2) Traer datos + tipo (FE/NC/ND/FEC)
                     var (tipo, datos) = await ConsultarDocumentoAsync(doc, ct);
 
-                    if (datos.Rows.Count == 0)
-                        throw new InvalidOperationException($"El SP no devolvió filas para QueueId={doc.DocumentosPendientes_Id} DocNum={doc.DocNum}.");
-
+                    if (datos.Rows.Count == 0) {
+                        TrazaArchivo.Escribir($"El SP ConsultarDocumentoAsync no devolvió filas para DocNum={doc.DocNum} Tipo={doc.TipoCE}.");
+                        throw new InvalidOperationException($"El SP ConsultarDocumentoAsync no devolvió filas para DocNum={doc.DocNum} Tipo={doc.TipoCE}.");
+                    }
+                       
                     var claveComprobante = ObtenerClaveDesdeResultadoSp(datos);
+
+                    TrazaArchivo.Escribir($"Se obtuvo la Clave:{claveComprobante} para el comprobante DocNum={doc.DocNum} Tipo={doc.TipoCE} ");
 
                     if (!string.IsNullOrWhiteSpace(claveComprobante))
                     {
+                        TrazaArchivo.Escribir($"Ejecuta ActualizarClaveDocumentoPendienteAsync para el comprobante DocNum={doc.DocNum} Tipo={doc.TipoCE}.");
                         await _repositorioCola.ActualizarClaveDocumentoPendienteAsync(
                             doc.DocumentosPendientes_Id,
                             claveComprobante,
                             ct);
                     }
 
+                    TrazaArchivo.Escribir($"Ejecuta el metodo Traducir para el comprobante DocNum={doc.DocNum} Tipo={doc.TipoCE} .");
                     // 3) Traducir (ideal: el traductor sabe el tipo)
                     // AJUSTA AQUÍ si tu ITraductorXml actualmente solo recibe 1 parámetro.
                     var xmlGosocket = _traductor.Traducir(tipo, datos);
 
                     // 3.1) Guardar XML en disco (si OutputPath está configurado)
                     var rutaXml = GuardarXmlEnDisco(doc, tipo, datos.Rows[0], xmlGosocket, "Comprobante");
-                    if (!string.IsNullOrWhiteSpace(rutaXml))
+
+                    if (!string.IsNullOrWhiteSpace(rutaXml)) {
+                        TrazaArchivo.Escribir($"XML GoSocket guardado en: {rutaXml}");
                         _logger.LogInformation("XML GoSocket guardado en: {Ruta}", rutaXml);
-
-
+                    }
+                    
                     xmlGosocket = NormalizarXml(xmlGosocket);
 
                     // 2) Construir petición GoSocket
@@ -162,6 +175,16 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                     //var json = JsonSerializer.Serialize(respuesta);
                     //var GlobalDocumentId = TryParseGlobalDocumentIdDesdeJson(json);
 
+                    TrazaArchivo.Escribir(
+                         $"Ejecuta EnviarDocumentoAutoridadAsync Peticion: " +
+                         $"FileContentLength={(peticion.FileContent?.Length ?? 0)} | " +
+                         $"Async={peticion.Async} | " +
+                         $"Mapping={peticion.Mapping} | " +
+                         $"Sign={peticion.Sign} | " +
+                         $"DefaultCertificate={peticion.DefaultCertificate} | " +
+                         $"Folio={peticion.Folio}"
+                     );
+
                     var respuesta = await _clienteGosocket.EnviarDocumentoAutoridadAsync(peticion, ct);
 
                     // Convertir a JSON (solo como puente)
@@ -179,10 +202,13 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                         : null;
 
                     var TextoRespuesa = $"{detalle}";
+                    TrazaArchivo.Escribir($"GuardarXmlEnDisco Respuesta: {TextoRespuesa}");
                     GuardarXmlEnDisco(doc, tipo, datos.Rows[0], TextoRespuesa, "Respuesta");
 
                     if (!envioOk)
-                    {                       
+                    {
+
+                        TrazaArchivo.Escribir($"GoSocket rechazó el envío para el comprobante DocNum={doc.DocNum} Tipo={doc.TipoCE} Detalle={detalle}");
 
                         _logger.LogWarning(
                              "GoSocket rechazó el envío. QueueId={QueueId} GlobalDocumentId={GlobalDocumentId} Code={Code} Desc={Desc}{Detalle}",
@@ -194,7 +220,7 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                          );
 
                         throw new InvalidOperationException(
-                            $"GoSocket rechazó el envío. Code={code}. Desc={desc}" + (detalle is null ? "" : $" Detalle={detalle}")
+                           $"GoSocket rechazó el envío para el comprobante DocNum={doc.DocNum} Tipo={doc.TipoCE} Detalle={detalle}"
                         );
                     }
 
@@ -221,8 +247,25 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                         Reintenta = "U_Reintenta"
                     };
 
+                    TrazaArchivo.Escribir(
+                                        $"Ejecuta ActualizarEstadoHaciendaAsync Peticion: " +
+                                        $"TipoDocumento={actualizacionSapEnvio.TipoDocumento} | " +
+                                        $"DocEntry={actualizacionSapEnvio.DocEntry} | " +
+                                        $"EstadoHacienda={actualizacionSapEnvio.EstadoHacienda} | " +
+                                        $"MensajeHacienda={actualizacionSapEnvio.MensajeHacienda} | " +
+                                        $"Clave={actualizacionSapEnvio.Clave} | " +
+                                        $"FechaRespuestaTexto={actualizacionSapEnvio.FechaRespuestaTexto} | " +
+                                        $"CampoEstado={actualizacionSapEnvio.CampoEstado} | " +
+                                        $"CampoMensaje={actualizacionSapEnvio.CampoMensaje} | " +
+                                        $"CampoClave={actualizacionSapEnvio.CampoClave} | " +
+                                        $"CampoFechaRespuesta={actualizacionSapEnvio.CampoFechaRespuesta} | " +
+                                        $"Reintenta={actualizacionSapEnvio.Reintenta}"
+                                    );
+
                     //PENDIENTE DE HABILITAR NO BORRAR
                     await _servicioActualizacionSap.ActualizarEstadoHaciendaAsync(actualizacionSapEnvio, ct);
+
+                    TrazaArchivo.Escribir($"Documento enviado a GoSocket. DocId={doc.DocumentosPendientes_Id} GlobalDocumentId={GlobalDocumentId}");
 
                     _logger.LogInformation(
                         "Documento enviado a GoSocket. DocId={DocId} GlobalDocumentId={GlobalDocumentId}",
@@ -234,6 +277,8 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                 }
                 catch (Exception ex)
                 {
+                    TrazaArchivo.Escribir($"Error enviando documento para el comprobante Tipo={doc.TipoCE} DocNum={doc.DocNum} Detalle:{ex.Message}.");
+          
                     _logger.LogError(ex, "Error enviando documento. DocId={DocId}", doc.DocumentosPendientes_Id);
 
                     await _repositorioEstados.MarcarRetryOFalloAsync(
@@ -246,6 +291,8 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
         }
         private static string ObtenerClaveDesdeResultadoSp(DataTable datosSp)
         {
+            TrazaArchivo.Escribir($"Ejecuta ObtenerClaveDesdeResultado");
+
             if (datosSp == null)
                 throw new ArgumentNullException(nameof(datosSp));
 
@@ -285,6 +332,8 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
         /// </summary>
         private string GuardarXmlEnDisco(DocumentoCola item, string tipo, DataRow r0, string xml, string prefijo)
         {
+            TrazaArchivo.Escribir($"Ejecuta GuardarXmlEnDisco del comprobante DocNum={item.DocNum} Tipo={item.TipoCE} ");
+
             // Si no se configuró OutputPath, no se guarda (no se considera error).
             if (string.IsNullOrWhiteSpace(_gosocketOptions.OutputPath))
                 return string.Empty;
@@ -343,6 +392,8 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
         /// </summary>
         private async Task<(string Tipo, DataTable Datos)> ConsultarDocumentoAsync(DocumentoCola item, CancellationToken ct)
         {
+            TrazaArchivo.Escribir($"Ejecuta ConsultarDocumentoAsync DocNum={item.DocNum} Tipo={item.TipoCE} ");
+
             // 1) Elegir SP por tipo
             var spName = item.TipoCE switch
             {

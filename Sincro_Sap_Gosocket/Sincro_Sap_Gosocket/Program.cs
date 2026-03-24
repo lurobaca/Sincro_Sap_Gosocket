@@ -67,19 +67,33 @@ namespace Sincro_Sap_Gosocket
                 .CreateLogger();
         }
 
+
+        //private static void CrearYEjecutarHost(string[] args)
+        //{
+        //    Host.CreateDefaultBuilder(args)
+        //        .UseContentRoot(AppContext.BaseDirectory)  
+        //        .UseWindowsService(options =>
+        //        {
+        //            options.ServiceName = "Sincro_Sap_Gosocket";
+        //        })
+        //        .UseSerilog()
+        //        .ConfigureServices(ConfigurarServicios)
+        //        .Build()
+        //        .Run();
+        //}
         private static void CrearYEjecutarHost(string[] args)
         {
             Host.CreateDefaultBuilder(args)
+                .UseContentRoot(AppContext.BaseDirectory)
                 .UseWindowsService(options =>
                 {
-                    options.ServiceName = "Sincro_Sap_Gosocket";
+                    options.ServiceName = "SincroSapGosocket2";
                 })
                 .UseSerilog()
                 .ConfigureServices(ConfigurarServicios)
                 .Build()
                 .Run();
         }
-
         private static void ConfigurarServicios(HostBuilderContext context, IServiceCollection services)
         {
             // 1) Options / Config
@@ -115,39 +129,87 @@ namespace Sincro_Sap_Gosocket
             services.AddOptions<OpcionesSql>();
         }
 
+        //private static void ValidarConfiguracionInicial(HostBuilderContext context)
+        //{
+        //    // SQL
+        //    var connectionString = context.Configuration.GetConnectionString("Sql");
+        //    if (string.IsNullOrWhiteSpace(connectionString)) { 
+        //        Log.Error("Falta ConnectionStrings:Sql en appsettings.json");
+        //        return; 
+        //    }
+        //    // GoSocket (Basic)
+        //    var opcionesGosocket = context.Configuration.GetSection("GoSocket").Get<OpcionesGosocket>();
+        //    if (opcionesGosocket == null)
+        //    {
+        //        Log.Fatal("No se encontró la configuración de GoSocket en appsettings.json");
+
+        //        Log.Error("Falta la sección GoSocket en appsettings.json");
+        //        return;
+        //    }
+
+        //    try
+        //    {
+        //        opcionesGosocket.ValidarConfiguracion(exigirOutputPath: false);
+        //        Log.Information("Configuración GoSocket (Basic Auth) validada correctamente");
+        //    }
+        //    catch (Exception ex)
+        //    { 
+        //        Log.Error("Error en configuración de GoSocket (Basic Auth)");
+        //        return;
+        //    }
+
+        //    // SAP
+        //    var opcionesSap = context.Configuration.GetSection("Sap").Get<OpcionesSap>();
+        //    if (opcionesSap == null)
+        //    { 
+        //        Log.Error("Falta la sección Sap en appsettings.json");
+        //        return;
+        //    }
+
+        //    if (string.IsNullOrWhiteSpace(opcionesSap.Servidor)) { 
+        //        Log.Error("Falta Sap:Servidor en appsettings.json");
+        //        return;
+        //    }
+
+        //    if (string.IsNullOrWhiteSpace(opcionesSap.LicenciaServidor)) { 
+        //        Log.Error("Falta Sap:LicenciaServidor en appsettings.json");
+        //        return;
+        //    }
+
+        //    if (string.IsNullOrWhiteSpace(opcionesSap.BaseDatos)) { 
+        //        Log.Error("Falta Sap:BaseDatos en appsettings.json");
+        //        return;
+        //    }
+
+        //    if (string.IsNullOrWhiteSpace(opcionesSap.Usuario))
+        //    {
+        //        Log.Error("Falta Sap:Usuario en appsettings.json");
+        //        return;
+        //    } 
+
+        //    if (string.IsNullOrWhiteSpace(opcionesSap.Clave))
+        //    {
+        //        Log.Error("Falta Sap:Clave en appsettings.json");
+        //        return;
+        //    } 
+
+        //    Log.Information("Configuración SAP validada correctamente");
+        //}
         private static void ValidarConfiguracionInicial(HostBuilderContext context)
         {
-            // SQL
             var connectionString = context.Configuration.GetConnectionString("Sql");
             if (string.IsNullOrWhiteSpace(connectionString))
                 throw new InvalidOperationException("Falta ConnectionStrings:Sql en appsettings.json");
 
-            // GoSocket (Basic)
             var opcionesGosocket = context.Configuration.GetSection("GoSocket").Get<OpcionesGosocket>();
             if (opcionesGosocket == null)
-            {
-                Log.Fatal("No se encontró la configuración de GoSocket en appsettings.json");
                 throw new InvalidOperationException("Falta la sección GoSocket en appsettings.json");
-            }
 
-            try
-            {
-                opcionesGosocket.ValidarConfiguracion(exigirOutputPath: false);
-                Log.Information("Configuración GoSocket (Basic Auth) validada correctamente");
-            }
-            catch (Exception ex)
-            {
-                Log.Fatal(ex, "Error en configuración de GoSocket (Basic Auth)");
-                throw;
-            }
+            opcionesGosocket.ValidarConfiguracion(exigirOutputPath: false);
 
-            // SAP
             var opcionesSap = context.Configuration.GetSection("Sap").Get<OpcionesSap>();
             if (opcionesSap == null)
-            {
-                Log.Fatal("No se encontró la configuración de Sap en appsettings.json");
                 throw new InvalidOperationException("Falta la sección Sap en appsettings.json");
-            }
 
             if (string.IsNullOrWhiteSpace(opcionesSap.Servidor))
                 throw new InvalidOperationException("Falta Sap:Servidor en appsettings.json");
@@ -164,9 +226,8 @@ namespace Sincro_Sap_Gosocket
             if (string.IsNullOrWhiteSpace(opcionesSap.Clave))
                 throw new InvalidOperationException("Falta Sap:Clave en appsettings.json");
 
-            Log.Information("Configuración SAP validada correctamente");
+            Log.Information("Configuración inicial validada correctamente");
         }
-
         private static void RegistrarInfraestructuraSql(HostBuilderContext context, IServiceCollection services)
         {
             var cs = context.Configuration.GetConnectionString("Sql") ?? "";
