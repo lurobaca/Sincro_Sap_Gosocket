@@ -2,6 +2,7 @@
 using SAPbobsCOM;
 using Sincro_Sap_Gosocket.Aplicacion.Interfaces;
 using Sincro_Sap_Gosocket.Configuracion;
+using Sincro_Sap_Gosocket.Infraestructura.Logs;
 using System;
 
 namespace Sincro_Sap_Gosocket.Infraestructura.Sap
@@ -30,11 +31,40 @@ namespace Sincro_Sap_Gosocket.Infraestructura.Sap
                 language = (BoSuppLangs)_opciones.Lenguaje,
                 DbServerType = ObtenerTipoServidor(_opciones.TipoServidorSap)
             };
-
+            TrazaArchivo.Escribir(
+                         "SAP CONEXION INTENTO | " +
+                         $"Server={company.Server} | " +
+                         $"LicenseServer={company.LicenseServer} | " +
+                         $"CompanyDB={company.CompanyDB} | " +
+                         $"UserName={company.UserName} | " +
+                         $"Password={(string.IsNullOrWhiteSpace(company.Password) ? "(vacío)" : "*****")} | " +
+                         $"DbUserName={company.DbUserName} | " +
+                         $"DbPassword={(string.IsNullOrWhiteSpace(company.DbPassword) ? "(vacío)" : "*****")} | " +
+                         $"UseTrusted={company.UseTrusted} | " +
+                         $"Language={(int)company.language} | " +
+                         $"DbServerType={company.DbServerType}"
+                     );
             var resultado = company.Connect();
             if (resultado != 0)
             {
                 company.GetLastError(out int codigo, out string mensaje);
+
+                TrazaArchivo.Escribir(
+                    "SAP CONEXION ERROR | " +
+                    $"Codigo={codigo} | " +
+                    $"Mensaje={mensaje} | " +
+                    $"Server={company.Server} | " +
+                    $"LicenseServer={company.LicenseServer} | " +
+                    $"CompanyDB={company.CompanyDB} | " +
+                    $"UserName={company.UserName} | " +
+                    $"Password={(string.IsNullOrWhiteSpace(company.Password) ? "(vacío)" : "*****")} | " +
+                    $"DbUserName={company.DbUserName} | " +
+                    $"DbPassword={(string.IsNullOrWhiteSpace(company.DbPassword) ? "(vacío)" : "*****")} | " +
+                    $"UseTrusted={company.UseTrusted} | " +
+                    $"Language={(int)company.language} | " +
+                    $"DbServerType={company.DbServerType}"
+                );
+
                 throw new InvalidOperationException(
                     $"No fue posible conectar a SAP Business One. Código: {codigo}. Mensaje: {mensaje}");
             }

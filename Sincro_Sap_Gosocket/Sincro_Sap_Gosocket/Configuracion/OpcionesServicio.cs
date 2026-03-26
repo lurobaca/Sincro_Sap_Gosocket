@@ -15,5 +15,7 @@ namespace Sincro_Sap_Gosocket.Configuracion
         /// Cantidad máxima de documentos a procesar por ciclo (envío y seguimiento).
         /// </summary>
         public int BatchSize { get; set; } = 10;
+
+        public string MarcaServidor { get; set; } = "";
     }
 }

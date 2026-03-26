@@ -1,12 +1,15 @@
 ﻿using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using SAPbobsCOM;
 using Sincro_Sap_Gosocket.Aplicacion.Interfaces;
 using Sincro_Sap_Gosocket.Configuracion;
 using Sincro_Sap_Gosocket.Dominio.Entidades;
 using Sincro_Sap_Gosocket.Dominio.Enumeraciones;
 using Sincro_Sap_Gosocket.Infraestructura.Gosocket.Dtos.Comun;
 using Sincro_Sap_Gosocket.Infraestructura.Gosocket.Dtos.Peticiones;
+using Sincro_Sap_Gosocket.Infraestructura.Gosocket.Dtos.Respuestas;
+using Sincro_Sap_Gosocket.Infraestructura.Logs;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -15,7 +18,6 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using Sincro_Sap_Gosocket.Infraestructura.Logs;
 
 namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
 {
@@ -197,9 +199,11 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
 
                     var code = envelope?.Datos?.Code ?? envelope?.CodigoError ?? "N/A";
                     var desc = envelope?.Datos?.Description ?? envelope?.MensajeError ?? "Error sin descripción.";
-                    var detalle = (envelope?.Datos?.Messages != null && envelope.Datos.Messages.Count > 0)
-                        ? string.Join(" | ", envelope.Datos.Messages)
+                    var detalle = (envelope?.Datos?.Messages != null && envelope.Datos.Messages.Count > 0  )
+                        ? string.Join(" | ", envelope.Datos.Messages  )
                         : null;
+
+                    if (!desc.Equals("")) detalle = "Messages: "+ detalle + " | MensajeError:" + desc;
 
                     var TextoRespuesa = $"{detalle}";
                     TrazaArchivo.Escribir($"GuardarXmlEnDisco Respuesta: {TextoRespuesa}");
@@ -263,7 +267,7 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                                     );
 
                     //PENDIENTE DE HABILITAR NO BORRAR
-                    await _servicioActualizacionSap.ActualizarEstadoHaciendaAsync(actualizacionSapEnvio, ct);
+                    //await _servicioActualizacionSap.ActualizarEstadoHaciendaAsync(actualizacionSapEnvio, ct);
 
                     TrazaArchivo.Escribir($"Documento enviado a GoSocket. DocId={doc.DocumentosPendientes_Id} GlobalDocumentId={GlobalDocumentId}");
 
@@ -277,7 +281,7 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                 }
                 catch (Exception ex)
                 {
-                    TrazaArchivo.Escribir($"Error enviando documento para el comprobante Tipo={doc.TipoCE} DocNum={doc.DocNum} Detalle:{ex.Message}.");
+                    TrazaArchivo.Escribir($"Error enviando documento para el comprobante Tipo={doc.TipoCE} DocNum={doc.DocNum} Detalle={ex.Message}.");
           
                     _logger.LogError(ex, "Error enviando documento. DocId={DocId}", doc.DocumentosPendientes_Id);
 
@@ -498,13 +502,25 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
         /// </summary>
         public async Task ProcesarSeguimientoHaciendaAsync(int batchSize, CancellationToken ct)
         {
+
+            TrazaArchivo.Escribir("Ejecuta ObtenerPendientesSeguimientoAsync STATUS_WAITING_HACIENDA");
             var pendientes = await _repositorioCola.ObtenerPendientesSeguimientoAsync(
                 STATUS_WAITING_HACIENDA,
                 batchSize,
                 ct);
 
+            TrazaArchivo.Escribir($"Resultado de ejecutar ObtenerPendientesSeguimientoAsync pendientes={pendientes.Count}");
+
             foreach (var doc in pendientes)
             {
+                TrazaArchivo.Escribir($"Obteniendo estado de Hacienda para DocId={doc.DocumentosPendientes_Id} DocNum={doc.DocNum} TipoCE={doc.TipoCE} TrackId={doc.GoSocket_TrackId}");
+    
+                _logger.LogInformation("Obteniendo estado de Hacienda. DocId={DocId} DocNum={DocNum} TipoCE={TipoCE} TrackId={TrackId}",
+                        doc.DocumentosPendientes_Id,
+                        doc.DocNum,
+                        doc.TipoCE,
+                        doc.GoSocket_TrackId);
+               
                 if (string.IsNullOrWhiteSpace(doc.GoSocket_TrackId))
                     continue;
 
@@ -512,14 +528,31 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                 {
                     var peticion = new PeticionGetDocument
                     {
-                        CodigoDocumento = doc.GoSocket_TrackId,
-                        CodigoPais = "CR"
+                        GlobalDocumentId = doc.GoSocket_TrackId,
+                        SenderCode=doc.SenderCode,
+                        Country = "CR"
                     };
+
+                    
+                    TrazaArchivo.Escribir($"Ejecuta ObtenerDocumentoAsync CodigoDocumento={doc.GoSocket_TrackId}");
 
                     var respuesta = await _clienteGosocket.ObtenerDocumentoAsync(peticion, ct);
 
                     if (!respuesta.Exitoso || respuesta.Datos == null)
                     {
+                        TrazaArchivo.Escribir(
+                                        $"[SEGUIMIENTO_HACIENDA][SIN_RESPUESTA] " +
+                                        $"DocPendienteId={doc.DocumentosPendientes_Id} | " +
+                                        $"DocEntry={doc.DocEntry} | " +
+                                        $"DocNum={doc.DocNum} | " +
+                                        $"TipoCE={doc.TipoCE} | " +
+                                        $"TrackId={doc.GoSocket_TrackId} | " +
+                                        $"StatusActual={doc.Status} | " +
+                                        $"FechaDoc={doc.TaxDate:yyyy-MM-dd} | " +
+                                        $"Exitoso={respuesta?.Exitoso} | " +
+                                        $"TieneDatos={(respuesta?.Datos != null)}"
+                                    );
+
                         await _repositorioEstados.ActualizarSeguimientoHaciendaAsync(
                             doc.DocumentosPendientes_Id,
                             "SIN_RESPUESTA",
@@ -529,11 +562,32 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                             ct);
 
                         continue;
-                    }
+                    } 
 
                     var datos = respuesta.Datos;
-                    var estado = (datos.Estado ?? string.Empty).Trim();
-                    var json = JsonSerializer.Serialize(datos); 
+
+                    if (datos.Documents == null || datos.Documents.Count == 0)
+                    {
+                        await _repositorioEstados.ActualizarSeguimientoHaciendaAsync(
+                            doc.DocumentosPendientes_Id,
+                            "SIN_DOCUMENTOS",
+                            JsonSerializer.Serialize(respuesta),
+                            false,
+                            10,
+                            ct);
+
+                        continue;
+                    }
+
+                    var documento = datos.Documents[0];
+                    var json = JsonSerializer.Serialize(documento);
+
+                    var authorityStatusCodigo = ObtenerTag(documento, "AuthorityStatus");
+                    var estado = MapearAuthorityStatus(authorityStatusCodigo);
+
+                    var notaMh = ObtenerNotaMh(documento);
+                    var fechaRespuesta = notaMh?.TimeStamp ?? documento.AuthorityTimeStamp;
+                    var mensajeHacienda = ConstruirMensajeHacienda(documento, estado);
 
                     var esFinal =
                         string.Equals(estado, "ACEPTADO", StringComparison.OrdinalIgnoreCase) ||
@@ -542,6 +596,9 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
 
                     if (esFinal)
                     {
+                        TrazaArchivo.Escribir($"Ejecuta MarcarDoneAsync. Del comprobante DocNm={doc.DocNum} TipoCE={doc.TipoCE} Estado={estado}");
+
+
                         await _repositorioEstados.MarcarDoneAsync(doc.DocumentosPendientes_Id, ct);
 
                         var actualizacionSap = new ActualizacionEstadoHacienda
@@ -549,19 +606,26 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                             TipoDocumento = MapearTipoDocumentoSap(doc.TipoCE),
                             DocEntry = doc.DocEntry,
                             EstadoHacienda = estado,
-                            MensajeHacienda = ObtenerMensajeRespuestaParaSap(datos, estado),
-                            Clave = null,
-                            FechaRespuestaTexto = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
+                            MensajeHacienda = mensajeHacienda,
+                            Clave = documento.CountryDocumentId,
+                            FechaRespuestaTexto = fechaRespuesta?.ToString("yyyy-MM-dd HH:mm:ss")
+                           ?? DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
                             CampoEstado = "U_EstadoHacienda",
                             CampoMensaje = "U_RespuestaHacienda",
                             CampoClave = "U_ClaveHacienda",
-                            CampoFechaRespuesta = "U_FechaRespHacienda"
+                            CampoFechaRespuesta = "U_FechaRespuesta"
                         };
+
+                        TrazaArchivo.Escribir($"Ejecuta ActualizarEstadoHaciendaAsync. Del comprobante DocNm={doc.DocNum} TipoCE={doc.TipoCE} Estado={estado} Mensaje Hacienda={mensajeHacienda}");
+
+
                         //PENDIENTE DE HABILITAR NO BORRAR
-                        //await _servicioActualizacionSap.ActualizarEstadoHaciendaAsync(actualizacionSap, ct);
+                        await _servicioActualizacionSap.ActualizarEstadoHaciendaAsync(actualizacionSap, ct);
                     }
                     else
                     {
+                        TrazaArchivo.Escribir($"Ejecuta ActualizarEstadoHaciendaAsync. Del comprobante DocNm={doc.DocNum} TipoCE={doc.TipoCE} Estado={estado} Mensaje Hacienda={mensajeHacienda}");
+
                         await _repositorioEstados.ActualizarSeguimientoHaciendaAsync(
                             doc.DocumentosPendientes_Id,
                             estado,
@@ -573,6 +637,9 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                 }
                 catch (Exception ex)
                 {
+
+                    TrazaArchivo.Escribir($"Error en seguimiento Hacienda. Del comprobante DocNm={doc.DocNum } TipoCE={doc.TipoCE}");
+
                     _logger.LogError(ex,
                         "Error en seguimiento Hacienda. QueueId={QueueId} DocEntry={DocEntry} TipoCE={TipoCE}",
                         doc.DocumentosPendientes_Id,
@@ -587,71 +654,63 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                 }
             }
         }
-        private static string ObtenerMensajeRespuestaParaSap(object datosRespuesta, string estado)
+        private static string ConstruirMensajeHacienda(GetDocumentItem documento, string estado)
         {
-            if (datosRespuesta == null)
-                return LimitarTexto($"Estado: {estado}", 250);
+            var partes = new List<string>();
 
-            try
-            {
-                var json = JsonSerializer.Serialize(datosRespuesta);
-                using var doc = JsonDocument.Parse(json);
-                var root = doc.RootElement;
+            var notaMh = ObtenerNotaMh(documento);
 
-                var mensajes = new List<string>();
+            //if (notaMh?.TimeStamp != null)
+            //    partes.Add($"Fecha MH: {notaMh.TimeStamp:yyyy-MM-dd HH:mm:ss}");
 
-                if (root.TryGetProperty("Description", out var description))
-                {
-                    var texto = description.GetString();
-                    if (!string.IsNullOrWhiteSpace(texto))
-                        mensajes.Add(texto.Trim());
-                }
+            //if (!string.IsNullOrWhiteSpace(estado))
+            //    partes.Add($"Estado: {estado}");
 
-                if (root.TryGetProperty("Mensaje", out var mensaje))
-                {
-                    var texto = mensaje.GetString();
-                    if (!string.IsNullOrWhiteSpace(texto))
-                        mensajes.Add(texto.Trim());
-                }
+            //if (!string.IsNullOrWhiteSpace(notaMh?.Code))
+            //    partes.Add($"Código MH: {notaMh.Code}");
 
-                if (root.TryGetProperty("Messages", out var messages) &&
-                    messages.ValueKind == JsonValueKind.Array)
-                {
-                    foreach (var item in messages.EnumerateArray())
-                    {
-                        var texto = item.GetString();
-                        if (!string.IsNullOrWhiteSpace(texto))
-                            mensajes.Add(texto.Trim());
-                    }
-                }
+            if (!string.IsNullOrWhiteSpace(notaMh?.Note))
+                partes.Add(notaMh.Note.Trim());
 
-                if (root.TryGetProperty("Errors", out var errors) &&
-                    errors.ValueKind == JsonValueKind.Array)
-                {
-                    foreach (var item in errors.EnumerateArray())
-                    {
-                        if (item.ValueKind == JsonValueKind.String)
-                        {
-                            var texto = item.GetString();
-                            if (!string.IsNullOrWhiteSpace(texto))
-                                mensajes.Add(texto.Trim());
-                        }
-                    }
-                }
+            //if (partes.Count == 0 && documento.AuthorityTimeStamp != null)
+            //    partes.Add($"Fecha MH: {documento.AuthorityTimeStamp:yyyy-MM-dd HH:mm:ss}");
 
-                var detalle = string.Join(" | ", mensajes.Where(x => !string.IsNullOrWhiteSpace(x)));
+            var texto = string.Join(" | ", partes);
+            return LimitarTexto(texto, 250);
+        }
+        private static string ObtenerTag(GetDocumentItem documento, string codigo)
+        {
+            if (documento?.DocumentTags == null || documento.DocumentTags.Count == 0)
+                return string.Empty;
 
-                if (string.IsNullOrWhiteSpace(detalle))
-                    detalle = $"Estado: {estado}";
+            var tag = documento.DocumentTags.Find(x =>
+                string.Equals(x.Code, codigo, StringComparison.OrdinalIgnoreCase));
 
-                return LimitarTexto(detalle, 250);
-            }
-            catch
-            {
-                return LimitarTexto($"Estado: {estado}", 250);
-            }
+            return tag?.Value?.Trim() ?? string.Empty;
         }
 
+        private static GetDocumentNote? ObtenerNotaMh(GetDocumentItem documento)
+        {
+            if (documento?.Notes == null || documento.Notes.Count == 0)
+                return null;
+
+            return documento.Notes.Find(x =>
+                string.Equals(x.Source, "MH", StringComparison.OrdinalIgnoreCase));
+        }
+
+        private static string MapearAuthorityStatus(string codigo)
+        {
+            return (codigo ?? string.Empty).Trim() switch
+            {
+                "1" => "RECIBIDO",
+                "2" => "ACEPTADO",
+                "3" => "RECHAZADO",
+                "4" => "PROCESANDO",
+                _ => string.IsNullOrWhiteSpace(codigo) ? "SIN_ESTADO" : $"AUTHORITY_STATUS_{codigo}"
+            };
+        }
+
+         
         private static string LimitarTexto(string texto, int maximo)
         {
             if (string.IsNullOrWhiteSpace(texto))

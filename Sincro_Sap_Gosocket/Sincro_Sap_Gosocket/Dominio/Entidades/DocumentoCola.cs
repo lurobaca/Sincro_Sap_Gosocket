@@ -1,4 +1,5 @@
 ﻿// Dominio/Entidades/DocumentoCola.cs
+using Newtonsoft.Json;
 using System;
 
 namespace Sincro_Sap_Gosocket.Dominio.Entidades
@@ -46,6 +47,7 @@ namespace Sincro_Sap_Gosocket.Dominio.Entidades
 
         // Respuesta de Hacienda (obtenida consultando a GoSocket)
         public string? Hacienda_Estado { get; set; }
-        public string? Hacienda_ResponseJson { get; set; }
+        public string? Hacienda_ResponseJson { get; set; } 
+        public string SenderCode { get; set; }
     }
 }

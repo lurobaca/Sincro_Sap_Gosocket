@@ -8,9 +8,10 @@ using Sincro_Sap_Gosocket.Aplicacion.Servicios;
 using Sincro_Sap_Gosocket.Configuracion;
 using Sincro_Sap_Gosocket.Configuracion.OpcionesSql;
 using Sincro_Sap_Gosocket.Infraestructura.Gosocket;
-using Sincro_Sap_Gosocket.Infraestructura.Sql;
 using Sincro_Sap_Gosocket.Infraestructura.Sap;
+using Sincro_Sap_Gosocket.Infraestructura.Sql;
 using System;
+using System.Globalization;
 using System.IO;
 using System.Net.Http.Headers;
 
@@ -23,7 +24,10 @@ namespace Sincro_Sap_Gosocket
             ConfigurarLogging();
 
             try
-            {
+            { 
+                CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
+                CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.InvariantCulture;
+
                 CrearYEjecutarHost(args);
             }
             catch (Exception ex)

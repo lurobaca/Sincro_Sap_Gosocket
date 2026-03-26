@@ -837,21 +837,48 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
             return int.TryParse(Convert.ToString(r[col]), out var v) ? v : defaultValue;
         }
 
+        //private static decimal GetDecimal(DataRow r, string col, decimal defaultValue = 0m)
+        //{
+        //    if (!r.Table.Columns.Contains(col) || r[col] == DBNull.Value)
+        //        return defaultValue;
+
+        //    var s = Convert.ToString(r[col]);
+        //    if (decimal.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, out var v))
+        //        return v;
+
+        //    if (decimal.TryParse(s, NumberStyles.Any, CultureInfo.CurrentCulture, out v))
+        //        return v;
+
+        //    return defaultValue;
+        //}
         private static decimal GetDecimal(DataRow r, string col, decimal defaultValue = 0m)
         {
             if (!r.Table.Columns.Contains(col) || r[col] == DBNull.Value)
                 return defaultValue;
 
-            var s = Convert.ToString(r[col]);
-            if (decimal.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, out var v))
+            var value = r[col];
+
+            // Si ya viene numérico, no lo conviertas a string
+            if (value is decimal d) return d;
+            if (value is double db) return Convert.ToDecimal(db);
+            if (value is float f) return Convert.ToDecimal(f);
+            if (value is int i) return i;
+            if (value is long l) return l;
+
+            var s = Convert.ToString(value)?.Trim();
+            if (string.IsNullOrWhiteSpace(s))
+                return defaultValue;
+
+            // primero CurrentCulture
+            if (decimal.TryParse(s, NumberStyles.Any, CultureInfo.CurrentCulture, out var v))
                 return v;
 
-            if (decimal.TryParse(s, NumberStyles.Any, CultureInfo.CurrentCulture, out v))
+            // luego InvariantCulture
+            if (decimal.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, out v))
                 return v;
 
             return defaultValue;
         }
-
         private static DateTimeOffset? GetDate(DataRow r, string col)
         {
             if (!r.Table.Columns.Contains(col) || r[col] == DBNull.Value)

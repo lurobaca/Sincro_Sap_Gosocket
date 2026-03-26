@@ -30,8 +30,12 @@ namespace Sincro_Sap_Gosocket
         
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
+            
             var pollSeconds = Math.Max(1, _opciones.PollSeconds);
             var batchSize = Math.Max(1, _opciones.BatchSize);
+
+            TrazaArchivo.Escribir($"MARCA APPSETTINGS: {_opciones.MarcaServidor}");
+            _logger.LogInformation("MARCA APPSETTINGS: {Marca}", _opciones.MarcaServidor);
 
             _logger.LogInformation("Worker iniciado. PollSeconds={PollSeconds}s BatchSize={BatchSize}",
                 pollSeconds, batchSize);
@@ -52,12 +56,15 @@ namespace Sincro_Sap_Gosocket
 
                     TrazaArchivo.Escribir("SERVICIO DE PROCESAMIENTO RESUELTO");
 
-                    await servicioProcesamiento.ProcesarPendientesAsync(batchSize, stoppingToken);
+                   await servicioProcesamiento.ProcesarPendientesAsync(batchSize, stoppingToken);
 
                     TrazaArchivo.Escribir("FIN ProcesarPendientesAsync");
 
+                    TrazaArchivo.Escribir("Inicia ProcesarSeguimientoHaciendaAsync");
                     // 2) Consultar seguimiento Hacienda (WAITING_HACIENDA)
-                    //await servicioProcesamiento.ProcesarSeguimientoHaciendaAsync(batchSize, stoppingToken);
+                    await servicioProcesamiento.ProcesarSeguimientoHaciendaAsync(batchSize, stoppingToken);
+
+                    TrazaArchivo.Escribir("Fin ProcesarSeguimientoHaciendaAsync");
                 }
                 catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
                 {
@@ -67,7 +74,7 @@ namespace Sincro_Sap_Gosocket
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Error general en ciclo del Worker.");
-                    TrazaArchivo.Error("Worker.ExecuteAsync", ex);
+                    TrazaArchivo.Escribir($"Worker.ExecuteAsync Detalle:{ex.Message}");
                 }
 
                 TrazaArchivo.Escribir($"ESPERANDO {pollSeconds} SEGUNDOS");

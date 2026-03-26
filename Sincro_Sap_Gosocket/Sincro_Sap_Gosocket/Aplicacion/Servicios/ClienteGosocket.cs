@@ -1,20 +1,23 @@
 ﻿// Infraestructura/Gosocket/ClienteGosocket.cs
-using System;
-using System.Collections.Generic;
-using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Text;
-using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using SAPbobsCOM;
 using Sincro_Sap_Gosocket.Aplicacion.Interfaces;
 using Sincro_Sap_Gosocket.Configuracion;
 using Sincro_Sap_Gosocket.Infraestructura.Gosocket.Dtos.Comun;
 using Sincro_Sap_Gosocket.Infraestructura.Gosocket.Dtos.Peticiones;
 using Sincro_Sap_Gosocket.Infraestructura.Gosocket.Dtos.Respuestas;
 using Sincro_Sap_Gosocket.Infraestructura.Gosocket.Excepciones;
+using Sincro_Sap_Gosocket.Infraestructura.Logs;
+using System;
+using System.Collections.Generic;
+using System.Net;
+using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Text;
+using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Sincro_Sap_Gosocket.Infraestructura.Gosocket
 {
@@ -153,6 +156,8 @@ namespace Sincro_Sap_Gosocket.Infraestructura.Gosocket
         {
             try
             {
+                TrazaArchivo.Escribir($"Ejecuta EjecutarPeticionAsync");
+
                 var requestUrl = endpoint;
 
                 if (metodo == HttpMethod.Get && queryFromObject != null)
@@ -179,6 +184,8 @@ namespace Sincro_Sap_Gosocket.Infraestructura.Gosocket
                             ? $"{error.Error}: {error.ErrorDescription}".Trim().Trim(':')
                             : $"HTTP {(int)response.StatusCode} - {response.ReasonPhrase}";
 
+                    TrazaArchivo.Escribir($"Error al enviar peticion Mensaje: {mensaje}");
+
                     return RespuestaApi<T>.CrearFallido(mensaje, ((int)response.StatusCode).ToString());
 
 
@@ -187,17 +194,24 @@ namespace Sincro_Sap_Gosocket.Infraestructura.Gosocket
 
                 var dto = TryParse<T>(raw);
                 if (dto == null)
+                {
+                    TrazaArchivo.Escribir($"No se pudo deserializar respuesta GoSocket.");
+
                     return RespuestaApi<T>.CrearFallido("No se pudo deserializar respuesta GoSocket.", "DESERIALIZE_ERROR");
+                }
+             
 
                 return RespuestaApi<T>.CrearExitoso(dto);
             }
             catch (TaskCanceledException ex) when (!ct.IsCancellationRequested)
             {
+                TrazaArchivo.Escribir($"Timeout consumiendo GoSocket en endpoint {endpoint}");
                 _logger.LogWarning(ex, "Timeout consumiendo GoSocket en endpoint {Endpoint}", endpoint);
                 return RespuestaApi<T>.CrearFallido("Timeout consumiendo GoSocket.", "TIMEOUT");
             }
             catch (Exception ex)
             {
+                TrazaArchivo.Escribir($"Error consumiendo GoSocket en endpoint {endpoint} Mensaje:{ex.Message}");
                 _logger.LogError(ex, "Error consumiendo GoSocket en endpoint {Endpoint}", endpoint);
                 throw new GoSocketApiException("Error consumiendo GoSocket.", ex);
             }

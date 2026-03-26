@@ -1,84 +1,186 @@
-﻿// Sincro_Sap_Gosocket/Infraestructura/Gosocket/Dtos/Respuestas/RespuestaGetDocument.cs
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 
 namespace Sincro_Sap_Gosocket.Infraestructura.Gosocket.Dtos.Respuestas
 {
-    /// <summary>
-    /// Respuesta de consulta de documento
-    /// </summary>
     public class RespuestaGetDocument
     {
-        /// <summary>
-        /// Código único del documento en GoSocket
-        /// </summary>
-        [JsonProperty("documentCode")]
-        public string CodigoDocumento { get; set; } = string.Empty;
+        [JsonProperty("Documents")]
+        public List<GetDocumentItem> Documents { get; set; } = new();
 
-        /// <summary>
-        /// Estado del documento en GoSocket
-        /// </summary>
-        [JsonProperty("status")]
-        public string Estado { get; set; } = string.Empty;
+        [JsonProperty("ContinuationToken")]
+        public string? ContinuationToken { get; set; }
 
-        /// <summary>
-        /// Estado del documento en la autoridad tributaria
-        /// </summary>
-        [JsonProperty("authorityStatus")]
-        public string EstadoAutoridad { get; set; } = string.Empty;
+        [JsonProperty("Description")]
+        public string? Description { get; set; }
+    }
 
-        /// <summary>
-        /// Código de trackId para seguimiento
-        /// </summary>
-        [JsonProperty("trackId", NullValueHandling = NullValueHandling.Ignore)]
-        public string TrackId { get; set; } = string.Empty;
+    public class GetDocumentItem
+    {
+        [JsonProperty("GlobalDocumentId")]
+        public string? GlobalDocumentId { get; set; }
 
-        /// <summary>
-        /// Tipo de documento (33, 34, 61, etc.)
-        /// </summary>
-        [JsonProperty("documentType")]
-        public string TipoDocumento { get; set; } = string.Empty;
+        [JsonProperty("CountryDocumentId")]
+        public string? CountryDocumentId { get; set; }
 
-        /// <summary>
-        /// Folio asignado al documento
-        /// </summary>
-        [JsonProperty("folio", NullValueHandling = NullValueHandling.Ignore)]
-        public int? Folio { get; set; }
+        [JsonProperty("ExternalId")]
+        public string? ExternalId { get; set; }
 
-        /// <summary>
-        /// Fecha de emisión del documento
-        /// </summary>
-        [JsonProperty("issueDate", NullValueHandling = NullValueHandling.Ignore)]
-        public DateTime? FechaEmision { get; set; }
+        [JsonProperty("CountryId")]
+        public string? CountryId { get; set; }
 
-        /// <summary>
-        /// RUT/NIT/CUI del emisor
-        /// </summary>
-        [JsonProperty("sender", NullValueHandling = NullValueHandling.Ignore)]
-        public string Remitente { get; set; } = string.Empty;
+        [JsonProperty("Date")]
+        public DateTime? Date { get; set; }
 
-        /// <summary>
-        /// RUT/NIT/CUI del receptor
-        /// </summary>
-        [JsonProperty("receiver", NullValueHandling = NullValueHandling.Ignore)]
-        public string Receptor { get; set; } = string.Empty;
+        [JsonProperty("DocumentTypeId")]
+        public int? DocumentTypeId { get; set; }
 
-        /// <summary>
-        /// Monto total del documento
-        /// </summary>
-        [JsonProperty("totalAmount", NullValueHandling = NullValueHandling.Ignore)]
-        public decimal? MontoTotal { get; set; }
+        [JsonProperty("DocumentTypeName")]
+        public string? DocumentTypeName { get; set; }
 
-        /// <summary>
-        /// Metadatos adicionales del documento
-        /// </summary>
-        [JsonProperty("metadata")]
-        public Dictionary<string, object> Metadatos { get; set; } = new Dictionary<string, object>();
+        [JsonProperty("NetAmount")]
+        public decimal? NetAmount { get; set; }
 
-        /// <summary>
-        /// Fecha de última actualización del estado
-        /// </summary>
-        [JsonProperty("lastStatusUpdate", NullValueHandling = NullValueHandling.Ignore)]
-        public DateTime? UltimaActualizacionEstado { get; set; }
+        [JsonProperty("FreeAmount")]
+        public decimal? FreeAmount { get; set; }
+
+        [JsonProperty("TaxAmount")]
+        public decimal? TaxAmount { get; set; }
+
+        [JsonProperty("TotalAmount")]
+        public decimal? TotalAmount { get; set; }
+
+        [JsonProperty("CurrencyType")]
+        public string? CurrencyType { get; set; }
+
+        [JsonProperty("SeriesNumber")]
+        public string? SeriesNumber { get; set; }
+
+        [JsonProperty("Series")]
+        public string? Series { get; set; }
+
+        [JsonProperty("Number")]
+        public int? Number { get; set; }
+
+        [JsonProperty("NumberStr")]
+        public string? NumberStr { get; set; }
+
+        [JsonProperty("DocumentSenderCode")]
+        public string? DocumentSenderCode { get; set; }
+
+        [JsonProperty("DocumentSenderName")]
+        public string? DocumentSenderName { get; set; }
+
+        [JsonProperty("DocumentReceiverCode")]
+        public string? DocumentReceiverCode { get; set; }
+
+        [JsonProperty("DocumentReceiverName")]
+        public string? DocumentReceiverName { get; set; }
+
+        [JsonProperty("DocumentFinancialOwnerCode")]
+        public string? DocumentFinancialOwnerCode { get; set; }
+
+        [JsonProperty("DocumentFinancialOwnerName")]
+        public string? DocumentFinancialOwnerName { get; set; }
+
+        [JsonProperty("FinancialDate")]
+        public DateTime? FinancialDate { get; set; }
+
+        [JsonProperty("EstimatedPaymentDate")]
+        public DateTime? EstimatedPaymentDate { get; set; }
+
+        [JsonProperty("DocumentTimeStamp")]
+        public DateTime? DocumentTimeStamp { get; set; }
+
+        [JsonProperty("AuthorityTimeStamp")]
+        public DateTime? AuthorityTimeStamp { get; set; }
+
+        [JsonProperty("SyncPoint")]
+        public string? SyncPoint { get; set; }
+
+        [JsonProperty("DocumentTags")]
+        public List<GetDocumentTag> DocumentTags { get; set; } = new();
+
+        [JsonProperty("TwoCheck")]
+        public object? TwoCheck { get; set; }
+
+        [JsonProperty("Notes")]
+        public List<GetDocumentNote> Notes { get; set; } = new();
+
+        [JsonProperty("Offers")]
+        public object? Offers { get; set; }
+
+        [JsonProperty("Fields")]
+        public List<GetDocumentField> Fields { get; set; } = new();
+
+        [JsonProperty("Author")]
+        public object? Author { get; set; }
+    }
+
+    public class GetDocumentTag
+    {
+        [JsonProperty("Code")]
+        public string? Code { get; set; }
+
+        [JsonProperty("TimeStamp")]
+        public DateTime? TimeStamp { get; set; }
+
+        [JsonProperty("Value")]
+        public string? Value { get; set; }
+    }
+
+    public class GetDocumentNote
+    {
+        [JsonProperty("Mandatory")]
+        public bool Mandatory { get; set; }
+
+        [JsonProperty("Code")]
+        public string? Code { get; set; }
+
+        [JsonProperty("Note")]
+        public string? Note { get; set; }
+
+        [JsonProperty("TimeStamp")]
+        public DateTime? TimeStamp { get; set; }
+
+        [JsonProperty("Detail")]
+        public string? Detail { get; set; }
+
+        [JsonProperty("Source")]
+        public string? Source { get; set; }
+    }
+
+    public class GetDocumentField
+    {
+        [JsonProperty("Code")]
+        public string? Code { get; set; }
+
+        [JsonProperty("Name")]
+        public string? Name { get; set; }
+
+        [JsonProperty("Value")]
+        public string? Value { get; set; }
+
+        [JsonProperty("ExternalId")]
+        public string? ExternalId { get; set; }
+
+        [JsonProperty("Source")]
+        public string? Source { get; set; }
+
+        [JsonProperty("IsValid")]
+        public bool? IsValid { get; set; }
+
+        [JsonProperty("EditingEnabled")]
+        public bool? EditingEnabled { get; set; }
+
+        [JsonProperty("Flow")]
+        public string? Flow { get; set; }
+
+        [JsonProperty("Timestamp")]
+        public DateTime? Timestamp { get; set; }
+
+        [JsonProperty("Category")]
+        public string? Category { get; set; }
     }
 }

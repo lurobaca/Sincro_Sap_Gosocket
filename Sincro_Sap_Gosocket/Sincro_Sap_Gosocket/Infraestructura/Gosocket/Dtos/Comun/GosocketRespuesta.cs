@@ -29,6 +29,7 @@ public class GosocketRespuesta
 
         [JsonPropertyName("FechaRespuesta")]
         public DateTime FechaRespuesta { get; set; }
+ 
     }
 
     public class GosocketDatos

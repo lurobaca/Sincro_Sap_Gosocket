@@ -100,9 +100,11 @@ namespace Sincro_Sap_Gosocket.Infraestructura.Sql
         
         public async Task<IReadOnlyList<DocumentoCola>> ObtenerPendientesSeguimientoAsync(string status, int batchSize, CancellationToken ct)
         {
-            if (string.IsNullOrWhiteSpace(status))
+            if (string.IsNullOrWhiteSpace(status)) {
+                TrazaArchivo.Escribir("throw ObtenerPendientesSeguimientoAsync El status es requerido");
                 throw new ArgumentException("El status es requerido.", nameof(status));
-
+            }
+                
             var sql = $@"
                         SELECT TOP (@BatchSize)
                             DocumentosPendientes_Id,
@@ -125,7 +127,12 @@ namespace Sincro_Sap_Gosocket.Infraestructura.Sql
                             GoSocket_HttpStatus,
                             GoSocket_ResponseJson,
                             Hacienda_Estado,
-                            Hacienda_ResponseJson
+                            Hacienda_ResponseJson ,
+                            CASE 
+                                WHEN Clave IS NOT NULL AND LEN(Clave) >= 20
+                                    THEN SUBSTRING(Clave, 12, 10)
+                                ELSE NULL
+                            END AS SenderCode
                         FROM {Tabla} WITH (READPAST)
                         WHERE
                             Status = @Status
@@ -139,7 +146,6 @@ namespace Sincro_Sap_Gosocket.Infraestructura.Sql
                 cmd.Parameters.Add("@Status", SqlDbType.VarChar, 50).Value = status;
             });
         }
-
 
         private static readonly Dictionary<string, string> TipoAColumna =
           new(StringComparer.OrdinalIgnoreCase)
@@ -292,12 +298,51 @@ namespace Sincro_Sap_Gosocket.Infraestructura.Sql
 
             return await cmd.ExecuteScalarAsync(ct);
         }
+        //private async Task<SqlConnection> AbrirConexionAsync(CancellationToken ct)
+        //{
+        //    var cn = _cnFactory.CreateConnection();
+        //    await cn.OpenAsync(ct);
+        //    return cn;
+        //}
+
         private async Task<SqlConnection> AbrirConexionAsync(CancellationToken ct)
         {
-            var cn = _cnFactory.CreateConnection();
-            await cn.OpenAsync(ct);
-            return cn;
+            try
+            {
+                var cn = _cnFactory.CreateConnection();
+                await cn.OpenAsync(ct);
+                return cn;
+            }
+            catch (SqlException sqlEx)
+            {
+                TrazaArchivo.Escribir(
+                    $"SQL ERROR AL ABRIR CONEXION:\n" +
+                    $"Message: {sqlEx.Message}\n" +
+                    $"Number: {sqlEx.Number}\n" +
+                    $"State: {sqlEx.State}\n" +
+                    $"Class: {sqlEx.Class}\n" +
+                    $"Server: {sqlEx.Server}\n" +
+                    $"Procedure: {sqlEx.Procedure}\n" +
+                    $"Line: {sqlEx.LineNumber}\n" +
+                    $"StackTrace: {sqlEx.StackTrace}"
+                );
+
+                throw;
+            }
+            catch (Exception ex)
+            {
+                TrazaArchivo.Escribir(
+                    $"ERROR GENERAL AL ABRIR CONEXION:\n" +
+                    $"Message: {ex.Message}\n" +
+                    $"Tipo: {ex.GetType().FullName}\n" +
+                    $"StackTrace: {ex.StackTrace}\n" +
+                    $"Inner: {ex.InnerException?.Message}"
+                );
+
+                throw;
+            }
         }
+
         /// <summary>
         /// Mapear permite crear y cargar un objeto del tio DocumentoCola para utilizarlo en los procesos posteriores 
         /// que crearan el xml y lo enviaran
@@ -329,6 +374,7 @@ namespace Sincro_Sap_Gosocket.Infraestructura.Sql
                 GoSocket_ResponseJson = GetString(rd, "GoSocket_ResponseJson"),
                 Hacienda_Estado = GetString(rd, "Hacienda_Estado"),
                 Hacienda_ResponseJson = GetString(rd, "Hacienda_ResponseJson"),
+                SenderCode = GetString(rd, "SenderCode"),
             };
         }
         private static Int64 GetInt64(SqlDataReader rd, string col)
