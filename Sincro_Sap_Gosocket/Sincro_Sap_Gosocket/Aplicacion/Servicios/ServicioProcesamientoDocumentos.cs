@@ -267,7 +267,7 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                                     );
 
                     //PENDIENTE DE HABILITAR NO BORRAR
-                    //await _servicioActualizacionSap.ActualizarEstadoHaciendaAsync(actualizacionSapEnvio, ct);
+                    await _servicioActualizacionSap.ActualizarEstadoHaciendaAsync(actualizacionSapEnvio, ct);
 
                     TrazaArchivo.Escribir($"Documento enviado a GoSocket. DocId={doc.DocumentosPendientes_Id} GlobalDocumentId={GlobalDocumentId}");
 
