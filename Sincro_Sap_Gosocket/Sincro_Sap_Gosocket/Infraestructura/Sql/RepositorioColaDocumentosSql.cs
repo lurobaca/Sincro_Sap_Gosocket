@@ -152,28 +152,50 @@ namespace Sincro_Sap_Gosocket.Infraestructura.Sql
             });
         }
 
+        // Diccionario que normaliza distintos tipos de documento o estados
+        // La clave (izquierda) es el valor que recibes
+        // El valor (derecha) es el valor "estándar" que quieres usar internamente
+        // StringComparer.OrdinalIgnoreCase permite que no importe si viene en mayúsculas o minúsculas
         private static readonly Dictionary<string, string> TipoAColumna =
-          new(StringComparer.OrdinalIgnoreCase)
-          {
-              ["FE"] = "FE",
-              ["FES"] = "FE",
-              ["TE"] = "TE",
-              ["TES"] = "TE",
-              ["NC"] = "NC",
-              ["NCS"] = "NC",
-              ["ND"] = "ND",
-              ["NDS"] = "ND",
-              ["FEC"] = "FEC",
-              ["RE"] = "RE",
-              ["MR_Aceptado"] = "MR_Aceptado",
-              ["MR_Aceptado_Parcial"] = "MR_Aceptado_Parcial",
-              ["MR_Rechazado"] = "MR_Rechazado",
-          };
+            new(StringComparer.OrdinalIgnoreCase)
+            {
+                // FACTURA ELECTRÓNICA
+                ["FE"] = "FE",          // ya viene correcto
+                ["FES"] = "FE",         // FE simplificada → se normaliza a FE
 
+                // TIQUETE ELECTRÓNICO
+                ["TE"] = "TE",
+                ["TES"] = "TE",         // TE simplificado → se normaliza a TE
+
+                // NOTA DE CRÉDITO
+                ["NC"] = "NC",
+                ["NCS"] = "NC",         // NC simplificada → se normaliza a NC
+
+                // NOTA DE DÉBITO
+                ["ND"] = "ND",
+                ["NDS"] = "ND",         // ND simplificada → se normaliza a ND
+
+                // FACTURA DE COMPRA
+                ["FEC"] = "FEC",
+
+                // RECIBO ELECTRÓNICO
+                ["RE"] = "RE",
+
+                // MENSAJES DE RESPUESTA DE HACIENDA
+                ["MR_Aceptado"] = "MR_Aceptado",                   // documento aceptado
+                ["MR_Aceptado_Parcial"] = "MR_Aceptado_Parcial",   // aceptado parcialmente
+                ["MR_Rechazado"] = "MR_Rechazado",                 // rechazado
+            };
         public async Task<string> ActualizarConsecutivoHaciendaAsync(string tipo , CancellationToken ct)
         {
-            if (!TipoAColumna.TryGetValue(tipo, out var columna))
+
+            _logger.LogInformation($"Ejecuta ActualizarConsecutivoHaciendaAsync Tipo={tipo}");
+
+            if (!TipoAColumna.TryGetValue(tipo, out var columna)) {
+                _logger.LogInformation($"Error ActualizarConsecutivoHaciendaAsync Mensaje='Tipo no válido: {tipo}");
                 throw new ArgumentException($"Tipo no válido: {tipo}", nameof(tipo));
+            }
+               
 
             var sql = $@"
                     UPDATE dbo.ComprobantesElectronicos_Consecutivos
@@ -192,8 +214,11 @@ namespace Sincro_Sap_Gosocket.Infraestructura.Sql
 
             var result = await EjecutarScalarAsync(sql, ct);
 
-            if (result is null || result == DBNull.Value)
+            if (result is null || result == DBNull.Value) {
+                _logger.LogInformation($"Error ActualizarConsecutivoHaciendaAsync Mensaje='No se pudo actualizar/obtener el consecutivo.");
                 throw new InvalidOperationException("No se pudo actualizar/obtener el consecutivo.");
+            }
+             
 
             return Convert.ToString(result)!;
         }

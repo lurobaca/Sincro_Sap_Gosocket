@@ -9,8 +9,8 @@ namespace Sincro_Sap_Gosocket.Dominio.Enumeraciones
 {
     public enum TipoDocumentoSap
     {
-        Factura,
-        NotaCredito,
-        NotaDebito
+        FE,
+        NC,
+        ND
     }
 }

@@ -106,13 +106,17 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
         /// </exception>
         public async Task ProcesarPendientesAsync(int batchSize, CancellationToken ct)
         {
-            TrazaArchivo.Escribir("Ejecuta ProcesarPendientesAsync / ObtenerPendientesAsync");
+      
 
             var pendientes = await _repositorioCola.ObtenerPendientesAsync(batchSize, ct);
+
             if (pendientes.Count == 0) return;
 
+            TrazaArchivo.Escribir($"Comprobantes nuevos detectados, pendientes={pendientes.Count}"); 
+
             foreach (var doc in pendientes)
-            {
+            { 
+
                 if (ct.IsCancellationRequested) break;
 
                 try
@@ -170,12 +174,6 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                         DefaultCertificate =false,
                         Folio= doc.DocNum
                     };
-
-                    // 3) Enviar
-                    //var respuesta = await _clienteGosocket.EnviarDocumentoAutoridadAsync(peticion, ct);
-
-                    //var json = JsonSerializer.Serialize(respuesta);
-                    //var GlobalDocumentId = TryParseGlobalDocumentIdDesdeJson(json);
 
                     TrazaArchivo.Escribir(
                          $"Ejecuta EnviarDocumentoAutoridadAsync Peticion: " +
@@ -238,7 +236,7 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
 
                     var actualizacionSapEnvio = new ActualizacionEstadoHacienda
                     {
-                        TipoDocumento = MapearTipoDocumentoSap(doc.TipoCE),
+                        TipoDocumento = doc.TipoCE.ToString().Trim(),
                         DocEntry = doc.DocEntry,
                         EstadoHacienda = "ENVIADO",
                         MensajeHacienda = "Documento enviado a GoSocket, pendiente respuesta de Hacienda",
@@ -266,8 +264,11 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                                         $"Reintenta={actualizacionSapEnvio.Reintenta}"
                                     );
 
+                    await _repositorioEstados.ActualizaEstadoHaciendaEnSapAsync(actualizacionSapEnvio, ct);
+
+
                     //PENDIENTE DE HABILITAR NO BORRAR
-                    await _servicioActualizacionSap.ActualizarEstadoHaciendaEnSapAsync(actualizacionSapEnvio, ct);
+                    //await _servicioActualizacionSap.ActualizarEstadoHaciendaEnSapAsync(actualizacionSapEnvio, ct);
 
                     TrazaArchivo.Escribir($"Documento enviado a GoSocket. DocId={doc.DocumentosPendientes_Id} GlobalDocumentId={GlobalDocumentId}");
 
@@ -503,17 +504,19 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
         public async Task ProcesarSeguimientoHaciendaAsync(int batchSize, CancellationToken ct)
         {
 
-            TrazaArchivo.Escribir("Ejecuta ObtenerPendientesSeguimientoAsync STATUS_WAITING_HACIENDA");
+            //TrazaArchivo.Escribir("Ejecuta ObtenerPendientesSeguimientoAsync STATUS_WAITING_HACIENDA");
             var pendientes = await _repositorioCola.ObtenerPendientesSeguimientoAsync(
                 STATUS_WAITING_HACIENDA,
                 batchSize,
                 ct);
 
-            TrazaArchivo.Escribir($"Resultado de ejecutar ObtenerPendientesSeguimientoAsync pendientes={pendientes.Count}");
+            if (pendientes.Count == 0) return;
+
+            TrazaArchivo.Escribir($"Comprobantes a la espera de respuesta de hacienda, pendientes={pendientes.Count}");
 
             foreach (var doc in pendientes)
             {
-                TrazaArchivo.Escribir($"Obteniendo estado de Hacienda para DocId={doc.DocumentosPendientes_Id} DocNum={doc.DocNum} TipoCE={doc.TipoCE} TrackId={doc.GoSocket_TrackId}");
+                TrazaArchivo.Escribir($"Obteniendo estado de Hacienda para DocNum={doc.DocNum} TipoCE={doc.TipoCE} TrackId={doc.GoSocket_TrackId}");
     
                 _logger.LogInformation("Obteniendo estado de Hacienda. DocId={DocId} DocNum={DocNum} TipoCE={TipoCE} TrackId={TrackId}",
                         doc.DocumentosPendientes_Id,
@@ -596,14 +599,15 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
 
                     if (esFinal)
                     {
-                        TrazaArchivo.Escribir($"Ejecuta MarcarDoneAsync. Del comprobante DocNm={doc.DocNum} TipoCE={doc.TipoCE} Estado={estado}");
+                        TrazaArchivo.Escribir($"Ejecuta MarcarDoneAsync. Del comprobante DocNm={doc.DocNum} TipoCE={doc.TipoCE} Estado={estado} mensajeHacienda={mensajeHacienda}");
 
                         //Marcar como Done en nuestra cola/estado para que no se vuelva a procesar (si ya tine un estado final)
                         await _repositorioEstados.MarcarDoneAsync(doc.DocumentosPendientes_Id, ct, estado, mensajeHacienda);
 
                         var actualizacionSap = new ActualizacionEstadoHacienda
                         {
-                            TipoDocumento = MapearTipoDocumentoSap(doc.TipoCE),
+                            //TipoDocumento = MapearTipoDocumentoSap(doc.TipoCE),
+                            TipoDocumento =  doc.TipoCE.ToString().Trim(),
                             DocEntry = doc.DocEntry,
                             EstadoHacienda = estado,
                             MensajeHacienda = mensajeHacienda,
@@ -618,9 +622,10 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
 
                         TrazaArchivo.Escribir($"Ejecuta ActualizarEstadoHaciendaEnSapAsync. Del comprobante DocNm={doc.DocNum} TipoCE={doc.TipoCE} Estado={estado} Mensaje Hacienda={mensajeHacienda}");
 
+                        await _repositorioEstados.ActualizaEstadoHaciendaEnSapAsync(actualizacionSap,ct);
 
                         //PENDIENTE DE HABILITAR NO BORRAR
-                        await _servicioActualizacionSap.ActualizarEstadoHaciendaEnSapAsync(actualizacionSap, ct);
+                         //await _servicioActualizacionSap.ActualizarEstadoHaciendaEnSapAsync(actualizacionSap, ct);
                     }
                     else
                     {
@@ -638,7 +643,7 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                 catch (Exception ex)
                 {
 
-                    TrazaArchivo.Escribir($"Error en seguimiento Hacienda. Del comprobante DocNm={doc.DocNum } TipoCE={doc.TipoCE}");
+                    TrazaArchivo.Escribir($"Error en seguimiento Hacienda. Del comprobante DocNm={doc.DocNum } TipoCE={doc.TipoCE} Error ={ex.Message}");
 
                     _logger.LogError(ex,
                         "Error en seguimiento Hacienda. QueueId={QueueId} DocEntry={DocEntry} TipoCE={TipoCE}",
@@ -676,6 +681,7 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
             //    partes.Add($"Fecha MH: {documento.AuthorityTimeStamp:yyyy-MM-dd HH:mm:ss}");
 
             var texto = string.Join(" | ", partes);
+
             return LimitarTexto(texto, 250);
         }
         private static string ObtenerTag(GetDocumentItem documento, string codigo)
@@ -750,18 +756,18 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                 return null;
             }
         }
-        private static TipoDocumentoSap MapearTipoDocumentoSap(string tipoCe)
-        {
-            return (tipoCe ?? string.Empty).Trim().ToUpperInvariant() switch
-            {
-                "FE" => TipoDocumentoSap.Factura,
-                "TE" => TipoDocumentoSap.Factura,
-                "FEC" => TipoDocumentoSap.Factura,
-                "NC" => TipoDocumentoSap.NotaCredito,
-                "ND" => TipoDocumentoSap.NotaDebito,
-                _ => throw new InvalidOperationException($"TipoCE no soportado para SAP: {tipoCe}")
-            };
-        }
+        //private static TipoDocumentoSap MapearTipoDocumentoSap(string tipoCe)
+        //{
+        //    return (tipoCe ?? string.Empty).Trim().ToUpperInvariant() switch
+        //    {
+        //        "FE" => TipoDocumentoSap.Factura,
+        //        "TE" => TipoDocumentoSap.Factura,
+        //        "FEC" => TipoDocumentoSap.Factura,
+        //        "NC" => TipoDocumentoSap.NotaCredito,
+        //        "ND" => TipoDocumentoSap.NotaDebito,
+        //        _ => throw new InvalidOperationException($"TipoCE no soportado para SAP: {tipoCe}")
+        //    };
+        //}
         //private static string? TryParseEstadoHaciendaDesdeJson(string json)
         //{
         //    try

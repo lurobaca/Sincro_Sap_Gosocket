@@ -4,7 +4,7 @@ namespace Sincro_Sap_Gosocket.Dominio.Entidades
 {
     public sealed class ActualizacionEstadoHacienda
     { 
-        public TipoDocumentoSap TipoDocumento { get; set; }
+        public string TipoDocumento { get; set; }
         public int DocEntry { get; set; }
 
         public string EstadoHacienda { get; set; } = string.Empty;
