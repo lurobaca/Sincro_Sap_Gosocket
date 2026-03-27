@@ -21,7 +21,7 @@ namespace Sincro_Sap_Gosocket.Infraestructura.Sql
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
-        public async Task MarcarDoneAsync(long documentosPendientesId, CancellationToken ct)
+        public async Task MarcarDoneAsync(long documentosPendientesId, CancellationToken ct,String Estado,String Resp)
         {
             var sql = $@"
                         UPDATE {Tabla}
@@ -29,7 +29,9 @@ namespace Sincro_Sap_Gosocket.Infraestructura.Sql
                             Status = 'DONE',
                             LockedBy = NULL,
                             LockedAt = NULL,
-                            NextAttemptAt = NULL
+                            NextAttemptAt = NULL,
+                            Hacienda_Estado = {Estado},
+                            Hacienda_ResponseJson = {Resp},
                         WHERE DocumentosPendientes_Id = @Id;";
 
             await EjecutarAsync(sql, documentosPendientesId, ct);
@@ -88,7 +90,7 @@ namespace Sincro_Sap_Gosocket.Infraestructura.Sql
             await cmd.ExecuteNonQueryAsync(ct);
         }
 
-        public async Task ActualizarSeguimientoHaciendaAsync(long documentosPendientesId, string? haciendaEstado, string? haciendaResponseJson, bool done, int attemptCount, CancellationToken ct)
+        public async Task ActualizaEstadoHaciendaEnDocumentosPendientesAsync(long documentosPendientesId, string? haciendaEstado, string? haciendaResponseJson, bool done, int attemptCount, CancellationToken ct)
         {
             var statusFinal = done ? "DONE" : "WAITING_HACIENDA";
 

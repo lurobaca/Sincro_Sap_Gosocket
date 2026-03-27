@@ -252,7 +252,7 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                     };
 
                     TrazaArchivo.Escribir(
-                                        $"Ejecuta ActualizarEstadoHaciendaAsync Peticion: " +
+                                        $"Ejecuta ActualizarEstadoHaciendaEnSapAsync Peticion: " +
                                         $"TipoDocumento={actualizacionSapEnvio.TipoDocumento} | " +
                                         $"DocEntry={actualizacionSapEnvio.DocEntry} | " +
                                         $"EstadoHacienda={actualizacionSapEnvio.EstadoHacienda} | " +
@@ -267,7 +267,7 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                                     );
 
                     //PENDIENTE DE HABILITAR NO BORRAR
-                    await _servicioActualizacionSap.ActualizarEstadoHaciendaAsync(actualizacionSapEnvio, ct);
+                    await _servicioActualizacionSap.ActualizarEstadoHaciendaEnSapAsync(actualizacionSapEnvio, ct);
 
                     TrazaArchivo.Escribir($"Documento enviado a GoSocket. DocId={doc.DocumentosPendientes_Id} GlobalDocumentId={GlobalDocumentId}");
 
@@ -553,7 +553,7 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                                         $"TieneDatos={(respuesta?.Datos != null)}"
                                     );
 
-                        await _repositorioEstados.ActualizarSeguimientoHaciendaAsync(
+                        await _repositorioEstados.ActualizaEstadoHaciendaEnDocumentosPendientesAsync(
                             doc.DocumentosPendientes_Id,
                             "SIN_RESPUESTA",
                             JsonSerializer.Serialize(respuesta),
@@ -568,7 +568,7 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
 
                     if (datos.Documents == null || datos.Documents.Count == 0)
                     {
-                        await _repositorioEstados.ActualizarSeguimientoHaciendaAsync(
+                        await _repositorioEstados.ActualizaEstadoHaciendaEnDocumentosPendientesAsync(
                             doc.DocumentosPendientes_Id,
                             "SIN_DOCUMENTOS",
                             JsonSerializer.Serialize(respuesta),
@@ -598,8 +598,8 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                     {
                         TrazaArchivo.Escribir($"Ejecuta MarcarDoneAsync. Del comprobante DocNm={doc.DocNum} TipoCE={doc.TipoCE} Estado={estado}");
 
-
-                        await _repositorioEstados.MarcarDoneAsync(doc.DocumentosPendientes_Id, ct);
+                        //Marcar como Done en nuestra cola/estado para que no se vuelva a procesar (si ya tine un estado final)
+                        await _repositorioEstados.MarcarDoneAsync(doc.DocumentosPendientes_Id, ct, estado, mensajeHacienda);
 
                         var actualizacionSap = new ActualizacionEstadoHacienda
                         {
@@ -616,17 +616,17 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                             CampoFechaRespuesta = "U_FechaRespuesta"
                         };
 
-                        TrazaArchivo.Escribir($"Ejecuta ActualizarEstadoHaciendaAsync. Del comprobante DocNm={doc.DocNum} TipoCE={doc.TipoCE} Estado={estado} Mensaje Hacienda={mensajeHacienda}");
+                        TrazaArchivo.Escribir($"Ejecuta ActualizarEstadoHaciendaEnSapAsync. Del comprobante DocNm={doc.DocNum} TipoCE={doc.TipoCE} Estado={estado} Mensaje Hacienda={mensajeHacienda}");
 
 
                         //PENDIENTE DE HABILITAR NO BORRAR
-                        await _servicioActualizacionSap.ActualizarEstadoHaciendaAsync(actualizacionSap, ct);
+                        await _servicioActualizacionSap.ActualizarEstadoHaciendaEnSapAsync(actualizacionSap, ct);
                     }
                     else
                     {
                         TrazaArchivo.Escribir($"Ejecuta ActualizarEstadoHaciendaAsync. Del comprobante DocNm={doc.DocNum} TipoCE={doc.TipoCE} Estado={estado} Mensaje Hacienda={mensajeHacienda}");
 
-                        await _repositorioEstados.ActualizarSeguimientoHaciendaAsync(
+                        await _repositorioEstados.ActualizaEstadoHaciendaEnDocumentosPendientesAsync(
                             doc.DocumentosPendientes_Id,
                             estado,
                             json,

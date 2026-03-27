@@ -67,7 +67,12 @@ namespace Sincro_Sap_Gosocket.Infraestructura.Sql
                             GoSocket_HttpStatus,
                             GoSocket_ResponseJson,
                             Hacienda_Estado,
-                            Hacienda_ResponseJson
+                            Hacienda_ResponseJson,
+                            CASE 
+                                WHEN Clave IS NOT NULL AND LEN(Clave) >= 20
+                                    THEN SUBSTRING(Clave, 12, 10)
+                                ELSE NULL
+                            END AS SenderCode
                         FROM {Tabla} WITH (READPAST)
                         WHERE
                             Status = 'PENDING'

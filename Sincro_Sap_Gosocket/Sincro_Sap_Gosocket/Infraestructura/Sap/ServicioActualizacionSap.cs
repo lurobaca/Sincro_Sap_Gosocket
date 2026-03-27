@@ -103,11 +103,20 @@ namespace Sincro_Sap_Gosocket.Infraestructura.Sap
      //       return Task.CompletedTask;
      //   }
 
-        public Task ActualizarEstadoHaciendaAsync(
+        public Task ActualizarEstadoHaciendaEnSapAsync(
             ActualizacionEstadoHacienda actualizacion,
             CancellationToken cancellationToken = default)
         {
-            TrazaArchivo.Escribir("Ejecuta ActualizarEstadoHaciendaAsync");
+            TrazaArchivo.Escribir("Ejecuta ActualizarEstadoHaciendaEnSapAsync");
+
+            var clave = actualizacion.Clave;
+
+            string DocNum = string.Empty;
+
+            if (!string.IsNullOrEmpty(clave) && clave.Length >= 8)
+            {
+                DocNum = clave.Substring(clave.Length - 8);
+            }
 
             Company? company = null;
             Documents? documento = null;
@@ -121,12 +130,12 @@ namespace Sincro_Sap_Gosocket.Infraestructura.Sap
                 if (!documento.GetByKey(actualizacion.DocEntry))
                 {
                     TrazaArchivo.Escribir(
-                        $"No se encontró el documento SAP. Tipo={actualizacion.TipoDocumento} DocEntry={actualizacion.DocEntry}");
+                        $"No se encontró el documento SAP. Tipo={actualizacion.TipoDocumento} DocNum={DocNum}");
 
                     _logger.LogWarning(
-                        "No se encontró el documento SAP. Tipo: {TipoDocumento}, DocEntry: {DocEntry}",
+                        "No se encontró el documento SAP. Tipo: {TipoDocumento}, DocNum: {DocNum}",
                         actualizacion.TipoDocumento,
-                        actualizacion.DocEntry);
+                       DocNum);
 
                     return Task.CompletedTask;
                 }
@@ -143,12 +152,12 @@ namespace Sincro_Sap_Gosocket.Infraestructura.Sap
                     company.GetLastError(out int codigo, out string mensaje);
 
                     TrazaArchivo.Escribir(
-                        $"Error actualizando SAP | Tipo={actualizacion.TipoDocumento} | DocEntry={actualizacion.DocEntry} | Codigo={codigo} | Mensaje={mensaje}");
+                        $"Error actualizando SAP | Tipo={actualizacion.TipoDocumento} | DocNum={DocNum} | Codigo={codigo} | Mensaje={mensaje}");
 
                     _logger.LogError(
-                        "Error actualizando documento SAP. Tipo: {TipoDocumento}, DocEntry: {DocEntry}, Codigo: {Codigo}, Mensaje: {Mensaje}",
+                        "Error actualizando documento SAP. Tipo: {TipoDocumento}, DocNum: {DocNum}, Codigo: {Codigo}, Mensaje: {Mensaje}",
                         actualizacion.TipoDocumento,
-                        actualizacion.DocEntry,
+                        DocNum,
                         codigo,
                         mensaje);
 
@@ -156,24 +165,26 @@ namespace Sincro_Sap_Gosocket.Infraestructura.Sap
                 }
 
                 TrazaArchivo.Escribir(
-                    $"Documento SAP actualizado correctamente. Tipo={actualizacion.TipoDocumento}, DocEntry={actualizacion.DocEntry}, Estado={actualizacion.EstadoHacienda}");
+                    $"Documento SAP actualizado correctamente. Tipo={actualizacion.TipoDocumento}, DocNum={DocNum}, Estado={actualizacion.EstadoHacienda}");
 
                 _logger.LogInformation(
-                    "Documento SAP actualizado correctamente. Tipo: {TipoDocumento}, DocEntry: {DocEntry}, Estado: {Estado}",
+                    "Documento SAP actualizado correctamente. Tipo: {TipoDocumento}, DocNum: {DocNum}, Estado: {Estado}",
                     actualizacion.TipoDocumento,
-                    actualizacion.DocEntry,
+                    DocNum,
                     actualizacion.EstadoHacienda);
             }
             catch (Exception ex)
             {
+               
+
                 TrazaArchivo.Escribir(
-                    $"EXCEPCION ActualizarEstadoHaciendaAsync | Tipo={actualizacion.TipoDocumento} | DocEntry={actualizacion.DocEntry} | Error={ex}");
+                    $"EXCEPCION ActualizarEstadoHaciendaEnSapAsync | Tipo={actualizacion.TipoDocumento} | DocNum={DocNum} | Error={ex.Message}");
 
                 _logger.LogError(
                     ex,
-                    "Excepción actualizando SAP. Tipo: {TipoDocumento}, DocEntry: {DocEntry}",
+                    "Excepción actualizando SAP. Tipo: {TipoDocumento}, DocNum: {DocNum}",
                     actualizacion.TipoDocumento,
-                    actualizacion.DocEntry);
+                    DocNum);
 
                 return Task.CompletedTask;
             }

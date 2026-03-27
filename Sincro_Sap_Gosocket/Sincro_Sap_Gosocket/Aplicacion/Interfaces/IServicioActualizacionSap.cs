@@ -6,7 +6,7 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Interfaces
 {
     public interface IServicioActualizacionSap
     {
-        Task ActualizarEstadoHaciendaAsync(
+        Task ActualizarEstadoHaciendaEnSapAsync(
             ActualizacionEstadoHacienda actualizacion,
             CancellationToken cancellationToken = default);
     }
