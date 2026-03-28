@@ -163,6 +163,8 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                     }
                     
                     xmlGosocket = NormalizarXml(xmlGosocket);
+ 
+                    var folio = int.Parse(doc.DocNum.ToString().Trim().Substring(5));
 
                     // 2) Construir petición GoSocket
                     var peticion = new PeticionSendDocumentToAuthority
@@ -172,7 +174,7 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                         Mapping = "11111111-1111-1111-1111-111111111111",
                         Sign=true,
                         DefaultCertificate =false,
-                        Folio= doc.DocNum
+                        Folio= folio
                     };
 
                     TrazaArchivo.Escribir(
