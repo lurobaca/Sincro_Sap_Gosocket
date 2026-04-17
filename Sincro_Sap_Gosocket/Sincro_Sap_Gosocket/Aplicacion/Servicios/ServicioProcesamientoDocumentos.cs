@@ -164,7 +164,18 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                     
                     xmlGosocket = NormalizarXml(xmlGosocket);
  
-                    var folio = int.Parse(doc.DocNum.ToString().Trim().Substring(5));
+                   
+                    var docNumTexto = doc.DocNum.ToString()?.Trim() ?? string.Empty;
+
+                    var folioTexto = docNumTexto.Length > 5
+                        ? docNumTexto.Substring(5)
+                        : docNumTexto;
+
+                    if (!int.TryParse(folioTexto, out var folio))
+                    {
+                        throw new InvalidOperationException(
+                            $"No se pudo convertir el folio a entero. DocNum='{docNumTexto}', FolioTexto='{folioTexto}'.");
+                    }
 
                     // 2) Construir petición GoSocket
                     var peticion = new PeticionSendDocumentToAuthority

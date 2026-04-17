@@ -388,7 +388,8 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                 imp.Exoneracion = new GosocketExoneracion
                 {
                     // Estos nombres ajústelos a sus clases, pero la idea es:
-                    PorcentajeCompra =  GetDecimal(row, "Exoneracion_IvaExonerado", 0),
+                    //PorcentajeCompra =  GetDecimal(row, "Exoneracion_IvaExonerado", 0),
+                    PorcentajeCompra = GetDecimal(row, "Exoneracion_PorcentajeCompra", 0),
                     MontoImpuesto = montoExo,
 
                     // Si usted ya trae estos datos del SP, métalos aquí:

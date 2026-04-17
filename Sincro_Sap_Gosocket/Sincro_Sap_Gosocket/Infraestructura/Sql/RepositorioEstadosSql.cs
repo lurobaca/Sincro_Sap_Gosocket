@@ -169,11 +169,15 @@ namespace Sincro_Sap_Gosocket.Infraestructura.Sql
                     tipo == "NDS" ||
                     tipo == "FEE")
                 {
-                    TablaSap = "[SBO_LARCE].[dbo].[OINV]";
+                    TablaSap = "[ZZTEST_SBO_LARCE].[dbo].[OINV]";
                 }
                 else if (tipo == "NC")
                 {
-                    TablaSap = "[SBO_LARCE].[dbo].[ORIN]";
+                    TablaSap = "[ZZTEST_SBO_LARCE].[dbo].[ORIN]";
+                }
+                else if (tipo == "FEC")
+                {
+                    TablaSap = "[ZZTEST_SBO_LARCE].[dbo].[OPCH]";
                 }
                 else
                 {
