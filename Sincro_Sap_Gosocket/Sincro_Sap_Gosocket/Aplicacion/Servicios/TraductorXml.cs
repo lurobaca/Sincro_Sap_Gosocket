@@ -62,6 +62,10 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
         
         private static GosocketEncabezado ConstruirEncabezadoDesdeSp(string tipoDocumento, DataRow r0)
         {
+            var emisorTipo = (GetString(r0, "Emisor_Tipo") ?? "").Trim().PadLeft(2, '0');
+            var emisorEsExtranjeroNoDomiciliado = tipoDocumento == "FEC" && emisorTipo == "05";
+            var emisorOtrasSenasExtranjero = GetString(r0, "Emisor_OtrasSenasExtranjero");
+
 
             var Emisor_nombreComercial = GetString(r0, "Emisor_NombreComercial"); // MH: Emisor/NombreComercial
             var Receptor_nombreComercial = GetString(r0, "Receptor_NombreComercial"); // MH: Emisor/NombreComercial
@@ -113,39 +117,73 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                 Emisor = new GosocketEmisor
                 {
                     NmbEmisor = GetString(r0, "Emisor_Nombre", GetString(r0, "Emisor_NombreComercial")),
-                    TipoContribuyente = (GetString(r0, "Emisor_Tipo") ?? "").Trim().PadLeft(2, '0'),
-                    IDEmisor = GetString(r0, "Emisor_Numero"), 
-                   
-                    // GoSocket: Encabezado/Emisor/NombreEmiso/PrimerNombre
+                    TipoContribuyente = emisorTipo,
+                    IDEmisor = GetString(r0, "Emisor_Numero"),
+
                     NombreEmisor = string.IsNullOrWhiteSpace(Emisor_nombreComercial)
-                                    ? null
-                                    : new GosocketNombreEmisor { PrimerNombre = Emisor_nombreComercial },
-                    DomFiscal = new GosocketDomFiscal
+                    ? null
+                    : new GosocketNombreEmisor { PrimerNombre = Emisor_nombreComercial },
+
+                    DomFiscal = emisorEsExtranjeroNoDomiciliado
+                    ? new GosocketDomFiscal
+                    {
+                        Referencia = emisorOtrasSenasExtranjero
+                    }
+                    : new GosocketDomFiscal
                     {
                         Calle = GetString(r0, "Emisor_OtrasSenas"),
                         Departamento = GetString(r0, "Emisor_Provincia"),
                         Distrito = GetString(r0, "Emisor_Distrito"),
                         Ciudad = GetString(r0, "Emisor_Canton"),
-                        Municipio = GetString(r0, "Emisor_Barrio"),                     
-                        //Referencia = GetString(r0, "Emisor_OtrasSenas")
+                        Municipio = GetString(r0, "Emisor_Barrio")
                     },
-                    ContactoEmisor = new GosocketContactoEmisor
+
+                    ContactoEmisor = emisorEsExtranjeroNoDomiciliado
+                    ? null
+                    : new GosocketContactoEmisor
                     {
                         Extension = GetString(r0, "Emisor_CodigoPais"),
                         Telefono = GetString(r0, "Emisor_NumTelefono"),
                         eMail = NormalizeEmail(GetString(r0, "Emisor_CorreoElectronico"))
-                    },
-                    //ExtrInfoEmisor = new List<GosocketExtraInfoDetalle>
-                    //{
-                    //    new GosocketExtraInfoDetalle
-                    //    {
-                    //        // GoSocket: Encabezado/Emisor/ExtrInfoEmisor[@name='Registrofiscal8707']
-                    //        // MH (referencia típica): Emisor/Identificacion/Numero (o dato fiscal interno que usted mapea)
-                    //        Name = "Registrofiscal8707",
-                    //        Value = GetString(r0, "Emisor_RegistroFiscal8707")
-                    //    }
-                    //},
+                    }
+
                 },
+                //Emisor = new GosocketEmisor
+                //{
+                //    NmbEmisor = GetString(r0, "Emisor_Nombre", GetString(r0, "Emisor_NombreComercial")),
+                //    TipoContribuyente = (GetString(r0, "Emisor_Tipo") ?? "").Trim().PadLeft(2, '0'),
+                //    IDEmisor = GetString(r0, "Emisor_Numero"), 
+
+                //    // GoSocket: Encabezado/Emisor/NombreEmiso/PrimerNombre
+                //    NombreEmisor = string.IsNullOrWhiteSpace(Emisor_nombreComercial)
+                //                    ? null
+                //                    : new GosocketNombreEmisor { PrimerNombre = Emisor_nombreComercial },
+                //    DomFiscal = new GosocketDomFiscal
+                //    {
+                //        Calle = GetString(r0, "Emisor_OtrasSenas"),
+                //        Departamento = GetString(r0, "Emisor_Provincia"),
+                //        Distrito = GetString(r0, "Emisor_Distrito"),
+                //        Ciudad = GetString(r0, "Emisor_Canton"),
+                //        Municipio = GetString(r0, "Emisor_Barrio"),                     
+                //        //Referencia = GetString(r0, "Emisor_OtrasSenas")
+                //    },
+                //    ContactoEmisor = new GosocketContactoEmisor
+                //    {
+                //        Extension = GetString(r0, "Emisor_CodigoPais"),
+                //        Telefono = GetString(r0, "Emisor_NumTelefono"),
+                //        eMail = NormalizeEmail(GetString(r0, "Emisor_CorreoElectronico"))
+                //    },
+                //    //ExtrInfoEmisor = new List<GosocketExtraInfoDetalle>
+                //    //{
+                //    //    new GosocketExtraInfoDetalle
+                //    //    {
+                //    //        // GoSocket: Encabezado/Emisor/ExtrInfoEmisor[@name='Registrofiscal8707']
+                //    //        // MH (referencia típica): Emisor/Identificacion/Numero (o dato fiscal interno que usted mapea)
+                //    //        Name = "Registrofiscal8707",
+                //    //        Value = GetString(r0, "Emisor_RegistroFiscal8707")
+                //    //    }
+                //    //},
+                //},
                 Receptor = referenciaEsTiquete ? null : new GosocketReceptor 
                 {  
                     NmbRecep = GetString(r0, "Receptor_Nombre"),                 
