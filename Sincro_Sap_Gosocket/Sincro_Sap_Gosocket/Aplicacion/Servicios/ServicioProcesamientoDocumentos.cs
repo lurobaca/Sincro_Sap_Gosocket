@@ -128,7 +128,7 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                              doc.DocumentosPendientes_Id  , doc.ObjType, doc.DocEntry, doc.DocSubType);
 
 
-                    // 2) Traer datos + tipo (FE/NC/ND/FEC)
+                    // 2) Traer datos + tipo (FE/NC/ND/FEC/FEE)
                     var (tipo, datos) = await ConsultarDocumentoAsync(doc, ct);
 
                     if (datos.Rows.Count == 0) {
@@ -137,6 +137,7 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                     }
                        
                     var claveComprobante = ObtenerClaveDesdeResultadoSp(datos);
+                 
 
                     TrazaArchivo.Escribir($"Se obtuvo la Clave:{claveComprobante} para el comprobante DocNum={doc.DocNum} Tipo={doc.TipoCE} ");
 
@@ -290,7 +291,11 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                         doc.DocumentosPendientes_Id,
                         GlobalDocumentId);
 
-                   await _repositorioCola.ActualizarConsecutivoHaciendaAsync (doc.TipoCE,  ct);
+                    var ObtieneTipoComprobante = ObtenerTipoComprobanteDesdeResultadoSp(datos);
+                    if (ObtieneTipoComprobante.Equals("09")){
+                        doc.TipoCE = "FEE";
+                    }
+                    await _repositorioCola.ActualizarConsecutivoHaciendaAsync (doc.TipoCE,  ct);
 
                 }
                 catch (Exception ex)
@@ -326,6 +331,26 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                 return string.Empty;
 
             return Convert.ToString(valorClave)?.Trim() ?? string.Empty;
+        }    
+        private static string ObtenerTipoComprobanteDesdeResultadoSp(DataTable datosSp)
+        {
+            TrazaArchivo.Escribir($"Ejecuta ObtenerTipoComprobanteDesdeResultadoSp");
+
+            if (datosSp == null)
+                throw new ArgumentNullException(nameof(datosSp));
+
+            if (datosSp.Rows.Count == 0)
+                return string.Empty;
+
+            if (!datosSp.Columns.Contains("TipoComprobante"))
+                return string.Empty;
+
+            var valorTipoComprobante = datosSp.Rows[0]["TipoComprobante"];
+
+            if (valorTipoComprobante == null || valorTipoComprobante == DBNull.Value)
+                return string.Empty;
+
+            return Convert.ToString(valorTipoComprobante)?.Trim() ?? string.Empty;
         }
         static string NormalizarXml(string xml)
         {

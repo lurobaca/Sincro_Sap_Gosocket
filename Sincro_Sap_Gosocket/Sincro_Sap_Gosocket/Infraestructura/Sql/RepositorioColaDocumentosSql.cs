@@ -159,6 +159,8 @@ namespace Sincro_Sap_Gosocket.Infraestructura.Sql
         private static readonly Dictionary<string, string> TipoAColumna =
             new(StringComparer.OrdinalIgnoreCase)
             {
+                // FACTURA ELECTRÓNICA EXPORTACION
+                ["FEE"] = "FEE",          
                 // FACTURA ELECTRÓNICA
                 ["FE"] = "FE",          // ya viene correcto
                 ["FES"] = "FE",         // FE simplificada → se normaliza a FE
@@ -385,7 +387,7 @@ namespace Sincro_Sap_Gosocket.Infraestructura.Sql
             {
                 DocumentosPendientes_Id = GetInt64(rd, "DocumentosPendientes_Id"),
                 SourceSystem = GetString(rd, "SourceSystem"),
-                TipoCE = GetString(rd, "TipoCE"),
+                TipoCE = GetString(rd, "TipoCE"),//TipoComprobante
                 ObjType = GetString(rd, "ObjType"),
                 DocEntry = GetInt32(rd, "DocEntry"),
                 DocNum = GetInt32(rd, "DocNum"),

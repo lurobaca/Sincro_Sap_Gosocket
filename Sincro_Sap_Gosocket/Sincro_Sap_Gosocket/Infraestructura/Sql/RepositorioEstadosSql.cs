@@ -167,7 +167,8 @@ namespace Sincro_Sap_Gosocket.Infraestructura.Sql
                     tipo == "TES" ||
                     tipo == "FES" ||
                     tipo == "NDS" ||
-                    tipo == "FEE")
+                    tipo == "FEE" ||
+                    tipo == "FEC")
                 {
                     TablaSap = "[ZZTEST_SBO_LARCE].[dbo].[OINV]";
                 }
