@@ -82,7 +82,8 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                 IdDoc = new GosocketIdDoc
                 {
                     Version = "4.4",
-                    Ambiente = "Sandbox",
+                    //Ambiente = "Sandbox",
+                    Ambiente = "Productivo",
                     Tipo = TipoComprobante,
                     Numero = GetString(r0, "CodSeguridad"),      // si viene NULL, lo genera su sistema/GoSocket
                     NumeroInterno =  GetString(r0, "CodSeguridad"),   // si usa el ERP interno
@@ -803,7 +804,7 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
 
             var Observaciones = GetString(r0, "Observaciones");
             if (!string.IsNullOrWhiteSpace(CorreosReceptor))
-                p.CampoString.Add(new GosocketCampoString { Name = "Observaciones", Value = CorreosReceptor });
+                p.CampoString.Add(new GosocketCampoString { Name = "Observaciones", Value = Observaciones });
 
             var Adenda_Tipo = GetString(r0, "Adenda_Tipo");
             if (!string.IsNullOrWhiteSpace(CorreosReceptor))
