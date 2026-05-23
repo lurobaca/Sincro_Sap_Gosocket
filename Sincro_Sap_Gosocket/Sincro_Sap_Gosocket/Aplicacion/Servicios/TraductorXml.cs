@@ -27,7 +27,6 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
         private const int COD_TotalMercExonerada = 1005;//1006; 
         private const int COD_TotalMercNoSujeta = 1008;
 
-
         // Si tenías un 9no concepto, agregalo aquí (ejemplo)
         private const int COD_OTRO_9 = 1009;
 
@@ -51,9 +50,7 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                     Otros = null
                 }
             };
-
- 
-
+            
             // Personalizados opcionales
             dte.Personalizados = ConstruirPersonalizados(r0);
 
@@ -100,17 +97,6 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                             Monto    = GetDecimal(r0, "ResumenFactura_TotalComprobante"),
                         }
                     },
-
-                    //ExtrInfoDoc = new List<GosocketExtraInfoDetalle>
-                    //{
-                    //    new GosocketExtraInfoDetalle
-                    //    {
-                    //        // GoSocket: Encabezado/IdDoc/ExtrInfoDoc[@name='CodSeguridad']
-                    //        // MH (referencia típica): IdDoc/CodSeguridad
-                    //        Name = "CondicionVentaOtros",
-                    //        Value = GetString(r0, "CondicionVenta")
-                    //    }
-                    //},
 
                     TermPagoCdg = GetString(r0, "PlazoCredito"),
                     ContenidoTC = GetString(r0, "Clave"),
@@ -213,10 +199,7 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
 
             return encabezado;
         }
-
-       
-
-
+           
         #region "DetalleComp"
         private static List<GosocketDetalle> ConstruirDetalleDesdeSp(DataTable dt)
         {
@@ -340,24 +323,7 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                 GlosaDscto = GetString(row, "DetalleServicio_NaturalezaDescuento")
             };
         }
-
-        //private static void AplicarImpuesto(GosocketDetalle item, DataRow row)
-        //{
-        //    var montoImp = GetDecimal(row, "DetalleServicio_ImpuestoMonto", 0m);
-        //    if (montoImp <= 0m) return;
-
-        //    item.ImpuestosDet.Add(new GosocketImpuestosDet
-        //    {
-        //        TipoImp = GetString(row, "DetalleServicio_ImpuestoCodigo", "01"),
-        //        //CodImp = GetString(row, "DetalleServicio_ImpuestoCodigo", "01"),
-        //        CodTasaImp = GetString(row, "DetalleServicio_ImpuestoCodigoTarifa"),
-        //        TasaImp = GetDecimal(row, "DetalleServicio_ImpuestoTarifa", 0m),
-        //        MontoImp = montoImp
-        //    });
-
- 
-        //}
-
+         
         private static void AplicarImpuesto(GosocketDetalle item, DataRow row)
         {
             // 1) BRUTO (antes de exoneración)
@@ -549,110 +515,7 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
 
             return lista;
         }
-        //private static GosocketTotales ConstruirTotalesDesdeSp(DataRow r0)
-        //{
-        //    var tot = new GosocketTotales
-        //    {
-        //        Moneda = GetString(r0, "ResumenFactura_CodigoMoneda"),
-        //        FctConv = GetDecimal(r0, "ResumenFactura_TipoCambio", 0m),
-        //        SubTotal = GetDecimal(r0, "ResumenFactura_TotalVenta", 0m),
-        //        MntDcto = GetDecimal(r0, "ResumenFactura_TotalDescuentos", 0m),
-        //        MntBase = GetDecimal(r0, "ResumenFactura_TotalVentaNeta", 0m),
-        //        MntImp = GetDecimal(r0, "ResumenFactura_TotalImpuesto", 0m),
-        //        VlrPagar = GetDecimal(r0, "ResumenFactura_TotalComprobante", GetDecimal(r0, "ResumenFactura_TotalVentaNeta", 0m) + GetDecimal(r0, "ResumenFactura_TotalImpuesto", 0m)),
-
-        //        VlrPalabras="",
-        //        MntExe = 0m,
-        //        ImporteNoGravado = 0m,
-        //        SaldoAnterior = GetDecimal(r0, "ResumenFactura_TotalVentaNeta", 0m),
-        //        ImporteOtrosTributos = 0m,
-        //        MntRcgo = 0m,
-        //        TotSubMonto = new List<GosocketTotSubMonto>()
-        //    };
-
-        //    // Subtotal por concepto (si quiere alimentar el [1..8] con TotalGravado por ejemplo)
-        //    var totalGravado = GetDecimal(r0, "ResumenFactura_TotalGravado", 0m);
-        //    if (totalGravado > 0m)
-        //        tot.TotSubMonto.Add(new GosocketTotSubMonto { MontoConcepto = totalGravado });
-
-        //    //// Desglose impuesto
-        //    //var totalImp = tot.MntImp;
-        //    //if (totalImp > 0m)
-        //    //{
-        //    //    tot.Impuesto.Add(new GosocketImpuestoTotal
-        //    //    {
-        //    //        Tipolmp = "01",
-        //    //        CodTasaImp = null, // su SP trae ImpuestoCodigoTarifa como NULL en capturas
-        //    //        MontoImp = totalImp
-        //    //    });
-        //    //}
-
-
-        //    return tot;
-        //}
-        //private static GosocketTotales ConstruirTotalesDesdeSp(DataRow r0)
-        //{
-        //    var tot = new GosocketTotales
-        //    {
-        //        Moneda = GetString(r0, "ResumenFactura_CodigoMoneda"),
-        //        FctConv = GetDecimal(r0, "ResumenFactura_TipoCambio", 0m),
-        //        SubTotal = GetDecimal(r0, "ResumenFactura_TotalVenta", 0m),
-        //        MntDcto = GetDecimal(r0, "ResumenFactura_TotalDescuentos", 0m),
-        //        MntBase = GetDecimal(r0, "ResumenFactura_TotalVentaNeta", 0m),
-        //        MntImp = GetDecimal(r0, "ResumenFactura_TotalImpuesto", 0m),
-        //        VlrPagar = GetDecimal(
-        //            r0,
-        //            "ResumenFactura_TotalComprobante",
-        //            GetDecimal(r0, "ResumenFactura_TotalVentaNeta", 0m) + GetDecimal(r0, "ResumenFactura_TotalImpuesto", 0m)
-        //        ),
-
-        //        VlrPalabras = "",
-        //        MntExe = 0m,
-        //        ImporteNoGravado = 0m,
-        //        SaldoAnterior = GetDecimal(r0, "ResumenFactura_TotalVentaNeta", 0m),
-        //        ImporteOtrosTributos = 0m,
-        //        MntRcgo = null
-        //    };
-
-        //    // ✅ TotSubMonto[1..8] en el orden correcto:
-        //    var sGrav = GetDecimal(r0, "ResumenFactura_TotalServGravados", 0m);
-        //    var sExe = GetDecimal(r0, "ResumenFactura_TotalServExentos", 0m);
-        //    var sExo = GetDecimal(r0, "ResumenFactura_TotalServExonerado", 0m);
-        //    var sNS = GetDecimal(r0, "ResumenFactura_TotalServNoSujeto", 0m);
-
-        //    var mGrav = GetDecimal(r0, "ResumenFactura_TotalMercanciasGravadas", 0m);
-        //    var mExe = GetDecimal(r0, "ResumenFactura_TotalMercanciasExentas", 0m);
-        //    var mExo = GetDecimal(r0, "ResumenFactura_TotalMercanciasExonerada", 0m);
-        //    var mNS = GetDecimal(r0, "ResumenFactura_TotalMercanciasNoSujeto", 0m);
-
-        //    // Si NO hay nada que reportar, no serialice TotSubMonto
-        //    if (sGrav + sExe + sExo + sNS + mGrav + mExe + mExo + mNS > 0m)
-        //    {
-        //        tot.TotSubMonto = new List<GosocketTotSubMonto>
-        //{
-        //    new GosocketTotSubMonto { MontoConcepto = sGrav }, // [1] Serv Gravados
-        //    new GosocketTotSubMonto { MontoConcepto = sExe  }, // [2] Serv Exentos
-        //    new GosocketTotSubMonto { MontoConcepto = sExo  }, // [3] Serv Exonerado
-        //    new GosocketTotSubMonto { MontoConcepto = sNS   }, // [4] Serv No Sujeto
-        //    new GosocketTotSubMonto { MontoConcepto = mGrav }, // [5] Merc Gravadas
-        //    new GosocketTotSubMonto { MontoConcepto = mExe  }, // [6] Merc Exentas
-        //    new GosocketTotSubMonto { MontoConcepto = mExo  }, // [7] Merc Exonerada
-        //    new GosocketTotSubMonto { MontoConcepto = mNS   }  // [8] Merc No Sujeto
-        //};
-        //    }
-        //    else
-        //    {
-        //        tot.TotSubMonto = null; // evita nodo vacío
-        //    }
-
-
-        //    AddExtra(tot.ExtraInfoTotal, "TotalNoSujeto", GetString(r0, "ResumenFactura_TotalNoSujeto"));
-        //    AddExtra(tot.ExtraInfoTotal, "TotalImpAsumFabrica", GetString(r0, "DetalleServicio_IVACobradoFabrica"));
-
-
-        //    return tot;
-        //}
-
+     
         private static GosocketTotales ConstruirTotalesDesdeSp(DataRow r0)
         {
             var GTotales = new GosocketTotales
