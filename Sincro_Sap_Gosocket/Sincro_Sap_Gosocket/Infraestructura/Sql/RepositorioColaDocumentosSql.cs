@@ -72,7 +72,8 @@ namespace Sincro_Sap_Gosocket.Infraestructura.Sql
                                 WHEN Clave IS NOT NULL AND LEN(Clave) >= 20
                                     THEN SUBSTRING(Clave, 12, 10)
                                 ELSE NULL
-                            END AS SenderCode
+                            END AS SenderCode,
+                            DocType
                         FROM {Tabla} WITH (READPAST)
                         WHERE
                             Status = 'PENDING'
@@ -137,7 +138,8 @@ namespace Sincro_Sap_Gosocket.Infraestructura.Sql
                                 WHEN Clave IS NOT NULL AND LEN(Clave) >= 20
                                     THEN SUBSTRING(Clave, 12, 10)
                                 ELSE NULL
-                            END AS SenderCode
+                            END AS SenderCode,
+                            DocType
                         FROM {Tabla} WITH (READPAST)
                         WHERE
                             Status = @Status
@@ -407,6 +409,7 @@ namespace Sincro_Sap_Gosocket.Infraestructura.Sql
                 Hacienda_Estado = GetString(rd, "Hacienda_Estado"),
                 Hacienda_ResponseJson = GetString(rd, "Hacienda_ResponseJson"),
                 SenderCode = GetString(rd, "SenderCode"),
+                DocType = GetString(rd, "DocType"),
             };
         }
         private static Int64 GetInt64(SqlDataReader rd, string col)

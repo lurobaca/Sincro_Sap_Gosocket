@@ -20,7 +20,7 @@ namespace Sincro_Sap_Gosocket.Dominio.Entidades
         public int DocNum { get; set; }
 
         public string? DocSubType { get; set; }
-        public string? DocType { get; set; }
+        public string DocType { get; set; }
 
         public string? CardCode { get; set; }
         public DateTime TaxDate { get; set; }

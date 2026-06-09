@@ -81,8 +81,8 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                 IdDoc = new GosocketIdDoc
                 {
                     Version = "4.4",
-                  //Ambiente = "Sandbox",
-                    Ambiente = "Productivo",
+                  Ambiente = "Sandbox",
+                  //  Ambiente = "Productivo",
                     Tipo = TipoComprobante,
                     Numero = GetString(r0, "CodSeguridad"),      // si viene NULL, lo genera su sistema/GoSocket
                     NumeroInterno =  GetString(r0, "CodSeguridad"),   // si usa el ERP interno

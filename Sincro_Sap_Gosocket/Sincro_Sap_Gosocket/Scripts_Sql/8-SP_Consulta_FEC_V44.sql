@@ -1,4 +1,4 @@
-USE [SincroSapGoSocket]
+USE [Pruebas_SincroSapGoSocket]
 GO
 /****** Object:  StoredProcedure [dbo].[SP_Consulta_FEC_V44]    Script Date: 22/05/2026 16:03:05 ******/
 SET ANSI_NULLS ON
@@ -83,8 +83,8 @@ BEGIN
 		ELSE ISNULL(OCRD.E_Mail, '')
 	END AS Emisor_CorreoElectronico,
             '' AS Emisor_Registrofiscal8707
-        FROM SBO_LARCE.dbo.OPCH OPCH
-        INNER JOIN SBO_LARCE.dbo.OCRD OCRD
+        FROM ZZTEST_SBO_LARCE.dbo.OPCH OPCH
+        INNER JOIN ZZTEST_SBO_LARCE.dbo.OCRD OCRD
             ON OCRD.CardCode = OPCH.CardCode
         WHERE OPCH.DocNum = @DocNum
           AND (NULLIF(@Tipo,'') IS NULL OR OPCH.DocType = @Tipo)
@@ -105,7 +105,7 @@ BEGIN
             ISNULL(OADM.E_Mail, '') AS Receptor_CorreoElectronico,
             '506' AS Receptor_CodigoPais,
             '' AS Receptor_IdentificacionExtranjero
-        FROM SBO_LARCE.dbo.OADM OADM
+        FROM ZZTEST_SBO_LARCE.dbo.OADM OADM
     ),
 
     DireccionReceptor AS (
@@ -143,14 +143,14 @@ BEGIN
             ISNULL(OADM.U_LDT_Nom_NeighB, '') AS Receptor_Barrio,
             ISNULL(OADM.CompnyAddr, '') AS Receptor_OtrasSenas,
             '' AS Receptor_OtrasSenasExtranjero
-        FROM SBO_LARCE.dbo.OADM OADM
+        FROM ZZTEST_SBO_LARCE.dbo.OADM OADM
     ),
 
     TipoFactura AS (
         SELECT
             T0.DocEntry,
             '08' AS CodigoTipoDocumento
-        FROM SBO_LARCE.dbo.OPCH T0
+        FROM ZZTEST_SBO_LARCE.dbo.OPCH T0
         WHERE T0.DocNum = @DocNum
           AND (NULLIF(@Tipo,'') IS NULL OR T0.DocType = @Tipo)
     ),
@@ -166,7 +166,7 @@ BEGIN
 			ELSE CE.FE
         END AS Consecutivo
     FROM TipoFactura TF
-    CROSS JOIN SincroSapGoSocket.dbo.ComprobantesElectronicos_Consecutivos CE
+    CROSS JOIN Pruebas_SincroSapGoSocket.dbo.ComprobantesElectronicos_Consecutivos CE
 ),	
 
     ClaveGenerada AS (
@@ -191,7 +191,7 @@ BEGIN
                 CAST(CAST(T0.DocNum AS BIGINT) AS VARCHAR(20)) COLLATE DATABASE_DEFAULT,
                 8
             ) AS Clave
-        FROM SBO_LARCE.dbo.OPCH T0
+        FROM ZZTEST_SBO_LARCE.dbo.OPCH T0
         CROSS JOIN Receptor R
         CROSS JOIN Consecutivo C
         WHERE T0.DocNum = @DocNum
@@ -222,8 +222,8 @@ BEGIN
                 THEN 'Compra a proveedor no domiciliado'
             ELSE 'Registro de documento del proveedor'
         END AS Referencia_Razon
-    FROM SBO_LARCE.dbo.OPCH T0
-    INNER JOIN SBO_LARCE.dbo.OCRD OCRD
+    FROM ZZTEST_SBO_LARCE.dbo.OPCH T0
+    INNER JOIN ZZTEST_SBO_LARCE.dbo.OCRD OCRD
         ON OCRD.CardCode = T0.CardCode
     WHERE T0.DocNum = @DocNum
       AND (NULLIF(@Tipo,'') IS NULL OR T0.DocType = @Tipo)
@@ -252,15 +252,15 @@ BEGIN
                 WHEN LTRIM(RTRIM(T1.TaxCode)) = 'ISC' THEN '10'
                 ELSE NULL
             END AS DetalleServicio_ImpuestoCodigoTarifa
-        FROM SBO_LARCE.dbo.PCH1 T1
+        FROM ZZTEST_SBO_LARCE.dbo.PCH1 T1
         WHERE T1.DocEntry = (
             SELECT DocEntry
-            FROM SBO_LARCE.dbo.OPCH
+            FROM ZZTEST_SBO_LARCE.dbo.OPCH
             WHERE DocNum = @DocNum
               AND (NULLIF(@Tipo,'') IS NULL OR DocType = @Tipo)
         )
           AND (
-              EXISTS (SELECT 1 FROM SBO_LARCE.dbo.OPCH H WHERE H.DocEntry = T1.DocEntry AND H.DocType = 'S')
+              EXISTS (SELECT 1 FROM ZZTEST_SBO_LARCE.dbo.OPCH H WHERE H.DocEntry = T1.DocEntry AND H.DocType = 'S')
               OR ISNULL(T1.TreeType, 'N') IN ('N','S')
           )
     ),
@@ -275,15 +275,15 @@ BEGIN
             0.0 AS DetalleServicio_ImpuestoEspecifico_Proporcion,
             0.0 AS DetalleServicio_ImpuestoEspecifico_VolumenUnidadConsumo,
             0.0 AS DetalleServicio_ImpuestoEspecifico_ImpuestoUnidad
-        FROM SBO_LARCE.dbo.PCH1 T1
+        FROM ZZTEST_SBO_LARCE.dbo.PCH1 T1
         WHERE T1.DocEntry = (
             SELECT DocEntry
-            FROM SBO_LARCE.dbo.OPCH
+            FROM ZZTEST_SBO_LARCE.dbo.OPCH
             WHERE DocNum = @DocNum
               AND (NULLIF(@Tipo,'') IS NULL OR DocType = @Tipo)
         )
           AND (
-              EXISTS (SELECT 1 FROM SBO_LARCE.dbo.OPCH H WHERE H.DocEntry = T1.DocEntry AND H.DocType = 'S')
+              EXISTS (SELECT 1 FROM ZZTEST_SBO_LARCE.dbo.OPCH H WHERE H.DocEntry = T1.DocEntry AND H.DocType = 'S')
               OR ISNULL(T1.TreeType, 'N') IN ('N','S')
           )
     ),
@@ -360,8 +360,8 @@ BEGIN
                 THEN 1
                 ELSE 0
             END AS PrecioFueConvertido
-        FROM SBO_LARCE.dbo.PCH1 T1
-        INNER JOIN SBO_LARCE.dbo.OPCH H
+        FROM ZZTEST_SBO_LARCE.dbo.PCH1 T1
+        INNER JOIN ZZTEST_SBO_LARCE.dbo.OPCH H
             ON H.DocEntry = T1.DocEntry
         WHERE H.DocNum = @DocNum
           AND (NULLIF(@Tipo,'') IS NULL OR H.DocType = @Tipo)
@@ -482,13 +482,13 @@ BEGIN
                     , 5)
                 ELSE 0.0
             END AS DetalleServicio_MontoDescuento
-        FROM SBO_LARCE.dbo.PCH1 T1
-        INNER JOIN SBO_LARCE.dbo.OPCH H
+        FROM ZZTEST_SBO_LARCE.dbo.PCH1 T1
+        INNER JOIN ZZTEST_SBO_LARCE.dbo.OPCH H
             ON H.DocEntry = T1.DocEntry
         INNER JOIN PrecioLinea PL
             ON T1.DocEntry = PL.DocEntry
            AND T1.LineNum = PL.LineNum
-        LEFT JOIN SBO_LARCE.dbo.OITM T4
+        LEFT JOIN ZZTEST_SBO_LARCE.dbo.OITM T4
             ON T1.ItemCode = T4.ItemCode
         WHERE H.DocNum = @DocNum
           AND (NULLIF(@Tipo,'') IS NULL OR H.DocType = @Tipo)
@@ -575,10 +575,10 @@ BEGIN
             DS.DetalleServicio_ImpuestoAsumidoEmisorFabrica,
             DS.DetalleServicio_SubTotal,
             T1.DiscPrcnt AS DetalleServicio_PorcentajeDescuento
-        FROM SBO_LARCE.dbo.PCH1 T1
-        INNER JOIN SBO_LARCE.dbo.OPCH H
+        FROM ZZTEST_SBO_LARCE.dbo.PCH1 T1
+        INNER JOIN ZZTEST_SBO_LARCE.dbo.OPCH H
             ON H.DocEntry = T1.DocEntry
-        LEFT JOIN SBO_LARCE.dbo.OITM T2
+        LEFT JOIN ZZTEST_SBO_LARCE.dbo.OITM T2
             ON T1.ItemCode = T2.ItemCode
         INNER JOIN DetalleServicio DS
             ON T1.DocEntry = DS.DocEntry
@@ -591,12 +591,12 @@ BEGIN
            AND T1.LineNum = IE.LineNum
         WHERE T1.DocEntry = (
             SELECT DocEntry
-            FROM SBO_LARCE.dbo.OPCH
+            FROM ZZTEST_SBO_LARCE.dbo.OPCH
             WHERE DocNum = @DocNum
               AND (NULLIF(@Tipo,'') IS NULL OR DocType = @Tipo)
         )
           AND (
-              EXISTS (SELECT 1 FROM SBO_LARCE.dbo.OPCH H WHERE H.DocEntry = T1.DocEntry AND H.DocType = 'S')
+              EXISTS (SELECT 1 FROM ZZTEST_SBO_LARCE.dbo.OPCH H WHERE H.DocEntry = T1.DocEntry AND H.DocType = 'S')
               OR ISNULL(T1.TreeType, 'N') IN ('N','S')
           )
     ),
@@ -699,7 +699,7 @@ BEGIN
             '' AS OtroCargo_Detalle,
             '' AS OtroCargo_TipoDocumento,
             0.0 AS OtroCargo_Porcentaje
-        FROM SBO_LARCE.dbo.OPCH OPCH
+        FROM ZZTEST_SBO_LARCE.dbo.OPCH OPCH
         INNER JOIN DetalleServicio DS
             ON OPCH.DocEntry = DS.DocEntry
         LEFT JOIN Impuesto IMP
@@ -893,13 +893,13 @@ BEGIN
         '' AS MontoEnLetras,
         T0.NumAtCard AS Param18
 
-    FROM SBO_LARCE.dbo.OPCH T0
+    FROM ZZTEST_SBO_LARCE.dbo.OPCH T0
     CROSS APPLY (
         SELECT RIGHT('000000' + CONVERT(VARCHAR(6), ISNULL(T0.CreateTS,0)), 6) AS ts6
     ) AS TTS
-    INNER JOIN SBO_LARCE.dbo.PCH1 T1
+    INNER JOIN ZZTEST_SBO_LARCE.dbo.PCH1 T1
         ON T0.DocEntry = T1.DocEntry
-    LEFT JOIN SBO_LARCE.dbo.OITM T4
+    LEFT JOIN ZZTEST_SBO_LARCE.dbo.OITM T4
         ON T1.ItemCode = T4.ItemCode
     JOIN Emisor E
         ON 1 = 1
@@ -928,7 +928,7 @@ BEGIN
         ON 1 = 1
     LEFT JOIN InfoReferencia IR
         ON IR.DocEntry = T0.DocEntry
-    LEFT JOIN SBO_LARCE.dbo.OCTG G
+    LEFT JOIN ZZTEST_SBO_LARCE.dbo.OCTG G
         ON G.GroupNum = T0.GroupNum
     WHERE (NULLIF(@Tipo,'') IS NULL OR T0.DocType = @Tipo)
       AND T0.DocNum = @DocNum

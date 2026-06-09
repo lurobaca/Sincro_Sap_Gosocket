@@ -277,7 +277,7 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                                         $"CampoFechaRespuesta={actualizacionSapEnvio.CampoFechaRespuesta} | " +
                                         $"Reintenta={actualizacionSapEnvio.Reintenta}"
                                     );
-
+                             
                     await _repositorioEstados.ActualizaEstadoHaciendaEnSapAsync(actualizacionSapEnvio, ct);
 
 
@@ -295,7 +295,7 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                     if (ObtieneTipoComprobante.Equals("09")){
                         doc.TipoCE = "FEE";
                     }
-                    await _repositorioCola.ActualizarConsecutivoHaciendaAsync (doc.TipoCE,  ct);
+                    await _repositorioCola.ActualizarConsecutivoHaciendaAsync(doc.TipoCE, ct);
 
                 }
                 catch (Exception ex)
@@ -463,8 +463,8 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                 },
                 new SqlParameter("@Tipo", SqlDbType.VarChar, 1)
                 {
-                    // En su ejemplo usa "I" (probablemente "Invoice" o similar).
-                    Value = "I"
+                    // En su ejemplo usa "I" (probablemente "Invoice" o similar). 
+                     Value = (object?)item.DocType ?? DBNull.Value
                 },
             };
 
