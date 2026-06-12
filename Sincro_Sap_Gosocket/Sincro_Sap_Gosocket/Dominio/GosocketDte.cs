@@ -251,30 +251,47 @@ namespace Sincro_Sap_Gosocket.Dominio
 
     public class GosocketDomFiscal
     {
-        //Otras Señas
+        // Otras Señas
         [XmlElement(Order = 1)]
         public string Calle { get; set; }
 
-        //Provincia
+        // Provincia
         [XmlElement(Order = 2)]
         public string Departamento { get; set; }
-        //Canton
+
+        // Canton
         [XmlElement(Order = 3)]
         public string Distrito { get; set; }
-        //Distrito
+
+        // Distrito
         [XmlElement(Order = 4)]
         public string Ciudad { get; set; }
-        //Barrio
+
+        // Barrio
         [XmlElement(Order = 5)]
         public string Municipio { get; set; }
-  
-        //OtrasSenasExtranjero
+
+        // OtrasSenasExtranjero
         [XmlElement(Order = 6)]
         public string Referencia { get; set; }
 
-        public bool ShouldSerializeBarrio() => !string.IsNullOrWhiteSpace(Municipio);
-        public bool ShouldSerializeCalle() => !string.IsNullOrWhiteSpace(Calle); 
-        public bool ShouldSerializeReferencia()  => !string.IsNullOrWhiteSpace(Referencia);
+        public bool ShouldSerializeCalle()
+            => !string.IsNullOrWhiteSpace(Calle);
+
+        public bool ShouldSerializeDepartamento()
+            => !string.IsNullOrWhiteSpace(Departamento);
+
+        public bool ShouldSerializeDistrito()
+            => !string.IsNullOrWhiteSpace(Distrito);
+
+        public bool ShouldSerializeCiudad()
+            => !string.IsNullOrWhiteSpace(Ciudad);
+
+        public bool ShouldSerializeMunicipio()
+            => !string.IsNullOrWhiteSpace(Municipio);
+
+        public bool ShouldSerializeReferencia()
+            => !string.IsNullOrWhiteSpace(Referencia);
     }
     //    public class GosocketDomFiscal
     //{

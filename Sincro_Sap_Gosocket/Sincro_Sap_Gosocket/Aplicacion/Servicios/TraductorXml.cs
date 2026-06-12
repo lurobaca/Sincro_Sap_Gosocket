@@ -76,13 +76,22 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
             var TipoComprobante = GetString(r0, "TipoComprobante", tipoDocumento);
             var referenciaTipoDoc = GetString(r0, "Referencia_TipoDoc");
             var esNcDeFee = TipoComprobante == "03" && referenciaTipoDoc == "09";
+
+            var receptorTipo = (GetString(r0, "Receptor_Tipo") ?? "").Trim().PadLeft(2, '0');
+
+            var receptorEsExtranjeroNoDomiciliado = receptorTipo == "05";
+
+            var omitirUbicacionNacionalReceptor =
+                esNcDeFee || receptorEsExtranjeroNoDomiciliado;
+
+
             var encabezado = new GosocketEncabezado
             {
                 IdDoc = new GosocketIdDoc
                 {
                     Version = "4.4",
-                  Ambiente = "Sandbox",
-                  //  Ambiente = "Productivo",
+                  //Ambiente = "Sandbox",
+                    Ambiente = "Productivo",
                     Tipo = TipoComprobante,
                     Numero = GetString(r0, "CodSeguridad"),      // si viene NULL, lo genera su sistema/GoSocket
                     NumeroInterno =  GetString(r0, "CodSeguridad"),   // si usa el ERP interno
@@ -155,26 +164,64 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
 
                     RegimenContableR = GetString(r0, "CodigoActividadReceptor"),
 
-                    DomFiscalRcp = esNcDeFee
-                                    ? new GosocketDomFiscal
-                                    {
-                                        Referencia = Receptor_OtrasSenasExtranjero
-                                    }
-                                    : new GosocketDomFiscal
-                                    {
-                                        Departamento = GetString(r0, "Receptor_Provincia"),
-                                        Distrito = GetString(r0, "Receptor_Distrito"),
-                                        Ciudad = GetString(r0, "Receptor_Canton"),
-                                        Municipio = GetString(r0, "Receptor_Barrio"),
-                                        Calle = GetString(r0, "Receptor_OtrasSenas")
-                                    },
+                    //DomFiscalRcp = esNcDeFee
+                    //                ? new GosocketDomFiscal
+                    //                {
+                    //                    Referencia = Receptor_OtrasSenasExtranjero
+                    //                }
+                    //                : new GosocketDomFiscal
+                    //                {
+                    //                    Departamento = GetString(r0, "Receptor_Provincia"),
+                    //                    Distrito = GetString(r0, "Receptor_Distrito"),
+                    //                    Ciudad = GetString(r0, "Receptor_Canton"),
+                    //                    Municipio = GetString(r0, "Receptor_Barrio"),
+                    //                    Calle = GetString(r0, "Receptor_OtrasSenas")
+                    //                },
 
-                    LugarRecep = esNcDeFee
-                                ? null
-                                : string.IsNullOrWhiteSpace(Receptor_OtrasSenasExtranjero)
-                                    ? null
-                                    : new GosocketLugarRecep { Calle = Receptor_OtrasSenasExtranjero },               
+                    //DomFiscalRcp = omitirUbicacionNacionalReceptor
+                    //    ? new GosocketDomFiscal
+                    //    {
+                    //        Referencia = !string.IsNullOrWhiteSpace(Receptor_OtrasSenasExtranjero)
+                    //            ? Receptor_OtrasSenasExtranjero
+                    //            : GetString(r0, "Receptor_OtrasSenas")
+                    //    }
+                    //    : new GosocketDomFiscal
+                    //    {
+                    //        Departamento = GetString(r0, "Receptor_Provincia"),
+                    //        Distrito = GetString(r0, "Receptor_Distrito"),
+                    //        Ciudad = GetString(r0, "Receptor_Canton"),
+                    //        Municipio = GetString(r0, "Receptor_Barrio"),
+                    //        Calle = GetString(r0, "Receptor_OtrasSenas")
+                    //    },
+                    DomFiscalRcp = omitirUbicacionNacionalReceptor
+                    ? null
+                    : new GosocketDomFiscal
+                    {
+                        Departamento = GetString(r0, "Receptor_Provincia"),
+                        Distrito = GetString(r0, "Receptor_Distrito"),
+                        Ciudad = GetString(r0, "Receptor_Canton"),
+                        Municipio = GetString(r0, "Receptor_Barrio"),
+                        Calle = GetString(r0, "Receptor_OtrasSenas")
+                    },
+                    //LugarRecep = esNcDeFee
+                    //            ? null
+                    //            : string.IsNullOrWhiteSpace(Receptor_OtrasSenasExtranjero)
+                    //                ? null
+                    //                : new GosocketLugarRecep { Calle = Receptor_OtrasSenasExtranjero },
 
+                    //LugarRecep = omitirUbicacionNacionalReceptor
+                    //? null
+                    //: string.IsNullOrWhiteSpace(Receptor_OtrasSenasExtranjero)
+                    //    ? null
+                    //    : new GosocketLugarRecep { Calle = Receptor_OtrasSenasExtranjero },
+                    LugarRecep = omitirUbicacionNacionalReceptor
+                        ? new GosocketLugarRecep
+                        {
+                            Calle = !string.IsNullOrWhiteSpace(Receptor_OtrasSenasExtranjero)
+                                ? Receptor_OtrasSenasExtranjero
+                                : GetString(r0, "Receptor_OtrasSenas")
+                        }
+                        : null,
                     ContactoReceptor = new GosocketContactoReceptor
                     {
                         Extension = GetString(r0, "Receptor_CodigoPais"),
@@ -238,7 +285,6 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                 ImpuestosDet = new List<GosocketImpuestosDet>(),
                 SubRecargo= SubRecargo,
 
-
                 MontoTotalItem = GetDecimal(row, "DetalleServicio_MontoTotalLinea"),
                 ExtraInfoDetalle = extraInfo
             };
@@ -281,7 +327,6 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
 
             return new GosocketSubRecargo
             {
-
                 MntRecargo = mnt
             };
         }

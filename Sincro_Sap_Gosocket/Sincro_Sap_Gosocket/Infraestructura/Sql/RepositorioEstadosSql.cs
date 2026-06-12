@@ -13,7 +13,7 @@ namespace Sincro_Sap_Gosocket.Infraestructura.Sql
 {
     public class RepositorioEstadosSql : IRepositorioEstados
     {
-        private const string Tabla = "[Pruebas_SincroSapGoSocket].[Integration].[DocumentosPendientes]";
+        private const string Tabla = "[SincroSapGoSocket].[Integration].[DocumentosPendientes]";
 
         private readonly ISqlConnectionFactory _cnFactory;
         private readonly ILogger<RepositorioEstadosSql> _logger;
@@ -167,18 +167,17 @@ namespace Sincro_Sap_Gosocket.Infraestructura.Sql
                     tipo == "TES" ||
                     tipo == "FES" ||
                     tipo == "NDS" ||
-                    tipo == "FEE" ||
-                    tipo == "FEC")
+                    tipo == "FEE" )
                 {
-                    TablaSap = "[ZZTEST_SBO_LARCE].[dbo].[OINV]";
+                    TablaSap = "[SBO_LARCE].[dbo].[OINV]";
                 }
                 else if (tipo == "NC")
                 {
-                    TablaSap = "[ZZTEST_SBO_LARCE].[dbo].[ORIN]";
+                    TablaSap = "[SBO_LARCE].[dbo].[ORIN]";
                 }
                 else if (tipo == "FEC")
                 {
-                    TablaSap = "[ZZTEST_SBO_LARCE].[dbo].[OPCH]";
+                    TablaSap = "[SBO_LARCE].[dbo].[OPCH]";
                 }
                 else
                 {
