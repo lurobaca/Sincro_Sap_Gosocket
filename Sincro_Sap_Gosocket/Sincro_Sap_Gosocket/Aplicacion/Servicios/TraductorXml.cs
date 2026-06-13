@@ -163,36 +163,7 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                                     : new GosocketNombreRecep{ PrimerNombre = Receptor_nombreComercial },
 
                     RegimenContableR = GetString(r0, "CodigoActividadReceptor"),
-
-                    //DomFiscalRcp = esNcDeFee
-                    //                ? new GosocketDomFiscal
-                    //                {
-                    //                    Referencia = Receptor_OtrasSenasExtranjero
-                    //                }
-                    //                : new GosocketDomFiscal
-                    //                {
-                    //                    Departamento = GetString(r0, "Receptor_Provincia"),
-                    //                    Distrito = GetString(r0, "Receptor_Distrito"),
-                    //                    Ciudad = GetString(r0, "Receptor_Canton"),
-                    //                    Municipio = GetString(r0, "Receptor_Barrio"),
-                    //                    Calle = GetString(r0, "Receptor_OtrasSenas")
-                    //                },
-
-                    //DomFiscalRcp = omitirUbicacionNacionalReceptor
-                    //    ? new GosocketDomFiscal
-                    //    {
-                    //        Referencia = !string.IsNullOrWhiteSpace(Receptor_OtrasSenasExtranjero)
-                    //            ? Receptor_OtrasSenasExtranjero
-                    //            : GetString(r0, "Receptor_OtrasSenas")
-                    //    }
-                    //    : new GosocketDomFiscal
-                    //    {
-                    //        Departamento = GetString(r0, "Receptor_Provincia"),
-                    //        Distrito = GetString(r0, "Receptor_Distrito"),
-                    //        Ciudad = GetString(r0, "Receptor_Canton"),
-                    //        Municipio = GetString(r0, "Receptor_Barrio"),
-                    //        Calle = GetString(r0, "Receptor_OtrasSenas")
-                    //    },
+                                     
                     DomFiscalRcp = omitirUbicacionNacionalReceptor
                     ? null
                     : new GosocketDomFiscal
@@ -203,17 +174,7 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                         Municipio = GetString(r0, "Receptor_Barrio"),
                         Calle = GetString(r0, "Receptor_OtrasSenas")
                     },
-                    //LugarRecep = esNcDeFee
-                    //            ? null
-                    //            : string.IsNullOrWhiteSpace(Receptor_OtrasSenasExtranjero)
-                    //                ? null
-                    //                : new GosocketLugarRecep { Calle = Receptor_OtrasSenasExtranjero },
 
-                    //LugarRecep = omitirUbicacionNacionalReceptor
-                    //? null
-                    //: string.IsNullOrWhiteSpace(Receptor_OtrasSenasExtranjero)
-                    //    ? null
-                    //    : new GosocketLugarRecep { Calle = Receptor_OtrasSenasExtranjero },
                     LugarRecep = omitirUbicacionNacionalReceptor
                         ? new GosocketLugarRecep
                         {
@@ -235,15 +196,7 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                 //ExtrInfoDoc = new List<GosocketExtraInfoDetalle>(),
             };
 
-            // Registro fiscal 8707 (si viene)
             AddExtra(encabezado.Emisor.ExtrInfoEmisor, "Registrofiscal8707", GetString(r0, "Emisor_Registrofiscal8707"));
-
-            // Condición venta / plazo crédito como extras (si su XML genérico lo requiere así)
-            //AddExtra(encabezado.Receptor.ExtrInfoDoc, "CondicionVenta", GetString(r0, "CondicionVenta"));
-            //AddExtra(encabezado.Receptor.ExtrInfoDoc, "PlazoCredito", GetString(r0, "PlazoCredito"));
-            //AddExtra(encabezado.ExtrInfoDoc, "CodigoActividadEconomica", GetString(r0, "CodigoActividadEconomica"));
- 
-
             return encabezado;
         }
            
@@ -454,7 +407,6 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                 MontoTotalParte = GetDecimal(row, "MontoTotalParte", 0m)       // si existe
             };
             
-
             AplicarDescuentoParte(parte, row);
             AplicarImpuestoParte(parte, row);
 
@@ -496,7 +448,6 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
             };
         }
 
-
         private static void AddCodigoSiTieneValor(List<GosocketCdgItem> codigos, string tipo, string valor)
         {
             if (string.IsNullOrWhiteSpace(tipo)) return;
@@ -504,8 +455,7 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
 
             codigos.Add(new GosocketCdgItem { TpoCodigo = tipo, VlrCodigo = valor });
         }
-
-       
+               
         private static void AddExtraSiTieneValor(List<GosocketExtraInfoDetalle> extras,string name,string? value)
         {
             if (string.IsNullOrWhiteSpace(value)) return;
@@ -517,9 +467,9 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
             });
         }
         private static void AddExtraSiTieneValorNoCero(
-    List<GosocketExtraInfoDetalle> extras,
-    string name,
-    string? value)
+        List<GosocketExtraInfoDetalle> extras,
+        string name,
+        string? value)
         {
             if (string.IsNullOrWhiteSpace(value)) return;
 
@@ -594,7 +544,6 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
             var TotalMercanciasExentas = GetDecimal(r0, "ResumenFactura_TotalMercanciasExentas", 0m);
             var TotalMercanciasExonerada = GetDecimal(r0, "ResumenFactura_TotalMercanciasExonerada", 0m);
             var TotalMercanciasNoSujeto = GetDecimal(r0, "ResumenFactura_TotalMercanciasNoSujeto", 0m);
-
 
             // Si ocupás un 9no, sacalo del SP (ejemplo)
             // var otro9 = GetDecimal(r0, "ResumenFactura_AlgoMas", 0m);
@@ -761,20 +710,6 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
             return int.TryParse(Convert.ToString(r[col]), out var v) ? v : defaultValue;
         }
 
-        //private static decimal GetDecimal(DataRow r, string col, decimal defaultValue = 0m)
-        //{
-        //    if (!r.Table.Columns.Contains(col) || r[col] == DBNull.Value)
-        //        return defaultValue;
-
-        //    var s = Convert.ToString(r[col]);
-        //    if (decimal.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, out var v))
-        //        return v;
-
-        //    if (decimal.TryParse(s, NumberStyles.Any, CultureInfo.CurrentCulture, out v))
-        //        return v;
-
-        //    return defaultValue;
-        //}
         private static decimal GetDecimal(DataRow r, string col, decimal defaultValue = 0m)
         {
             if (!r.Table.Columns.Contains(col) || r[col] == DBNull.Value)

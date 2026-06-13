@@ -293,21 +293,6 @@ namespace Sincro_Sap_Gosocket.Dominio
         public bool ShouldSerializeReferencia()
             => !string.IsNullOrWhiteSpace(Referencia);
     }
-    //    public class GosocketDomFiscal
-    //{
-    //    public string Provincia { get; set; }
-    //    public string Canton { get; set; }
-    //    public string Distrito { get; set; }
-
-    //    public string Barrio { get; set; }
-    //    public string Calle { get; set; }
-    //    public string OtrasSenas { get; set; }
-
-    //    public bool ShouldSerializeBarrio() => !string.IsNullOrWhiteSpace(Barrio);
-    //    public bool ShouldSerializeCalle() => !string.IsNullOrWhiteSpace(Calle);
-    //    public bool ShouldSerializeOtrasSenas() => !string.IsNullOrWhiteSpace(OtrasSenas);
-    //}
-
 
     public class GosocketContactoEmisor
     {
@@ -322,9 +307,7 @@ namespace Sincro_Sap_Gosocket.Dominio
         // MH: Emisor/Telefono/NumTelefono -> GoSocket: Encabezado/Emisor/ContactoEmisor/Telefono
         [XmlElement(Order =3)]
         public string Telefono { get; set; }
-
- 
-
+        
         public bool HasContent()
             => !string.IsNullOrWhiteSpace(Telefono) || !string.IsNullOrWhiteSpace(eMail);
 
@@ -345,7 +328,6 @@ namespace Sincro_Sap_Gosocket.Dominio
         [XmlElement(Order = 3)]
         public string Telefono { get; set; }
       
-
         public bool HasContent()
             => !string.IsNullOrWhiteSpace(Telefono) || !string.IsNullOrWhiteSpace(Telefono);
 
@@ -364,7 +346,6 @@ namespace Sincro_Sap_Gosocket.Dominio
         public string TpoListaItem { get; set; }
 
         public bool ShouldSerializeTpoListaItem() =>   !string.IsNullOrWhiteSpace(TpoListaItem);
-
 
         // ...
         [XmlElement("CdgItem", Order = 3)]
@@ -439,21 +420,6 @@ namespace Sincro_Sap_Gosocket.Dominio
 
     #region DetalleComp (Surtido / Partes)
 
-
-
-    //public class GosocketSubRecargo
-    //{
-
-    //      <TipoRecargo />
-    //            <GlosaRecargo />
-
-
-
-    //    [XmlElement("MntRecargo", Order = 1)]
-    //    public decimal MntRecargo { get; set; }
-
-    //    public bool ShouldSerializeMntRecargo() => MntRecargo > 0m;
-    //}
     public class GosocketSubRecargo
     {
         [XmlElement("TipoRecargo", Order = 1)]
@@ -474,8 +440,7 @@ namespace Sincro_Sap_Gosocket.Dominio
 
         //public bool ShouldSerializeMntRecargo() =>
         //    MntRecargo.HasValue && MntRecargo.Value > 0m;
-
-       
+               
     }
 
     // /DTE/Documento/Detalle[1]/DetalleComp
@@ -491,10 +456,7 @@ namespace Sincro_Sap_Gosocket.Dominio
     // /DTE/Documento/Detalle[1]/DetalleComp/Parte[1]
     public class GosocketParte
     {
-        // /DTE/Documento/Detalle[1]/DetalleComp/Parte[1]/CdgParte[TpoCodigoParte='CABYS']/VlrCodigoParte
-        // /DTE/Documento/Detalle[1]/DetalleComp/Parte[1]/CdgParte/TpoCodigoParte
-        // /DTE/Documento/Detalle[1]/DetalleComp/Parte[1]/CdgParte[TpoCodigoParte='XX']/VlrCodigoParte
-        //
+
         // Nota: este nodo se repite (uno para CABYS y otro para Código Comercial “XX” o el que aplique)
         [XmlElement("CdgParte", Order = 1)]
         public List<GosocketCdgParte> CdgParte { get; set; } = new();
@@ -526,9 +488,7 @@ namespace Sincro_Sap_Gosocket.Dominio
         public decimal MontoBrutoParte { get; set; }
 
         // Descuento surtido
-        // /DTE/Documento/Detalle[1]/DetalleComp/Parte[1]/SubDsctoParte/MntDscto
-        // /DTE/Documento/Detalle[1]/DetalleComp/Parte[1]/SubDsctoParte/TipoDscto
-        // /DTE/Documento/Detalle[1]/DetalleComp/Parte[1]/SubDsctoParte/GlosaDscto
+
         [XmlElement("SubDsctoParte", Order = 8)]
         public GosocketSubDsctoParte SubDsctoParte { get; set; }
 
@@ -549,12 +509,6 @@ namespace Sincro_Sap_Gosocket.Dominio
         public decimal MontoTotalParte { get; set; }
 
         // Impuesto surtido
-        // /DTE/Documento/Detalle[1]/DetalleComp/Parte[1]/ImpuestosParte/TipoImp
-        // /DTE/Documento/Detalle[1]/DetalleComp/Parte[1]/ImpuestosParte/CodTasaImp
-        // /DTE/Documento/Detalle[1]/DetalleComp/Parte[1]/ImpuestosParte/TasaImp
-        // /DTE/Documento/Detalle[1]/DetalleComp/Parte[1]/ImpuestosParte/CuotaImp
-        // /DTE/Documento/Detalle[1]/DetalleComp/Parte[1]/ImpuestosParte/ExtraInfoImpDetParte[@name='CantidadUnidadMedida'|'Porcentaje'|'Proporcion'|'VolumenUnidadConsumo'|'ImpuestoUnidad']
-        // /DTE/Documento/Detalle[1]/DetalleComp/Parte[1]/ImpuestosParte/MontoImp
         [XmlElement("ImpuestosParte", Order = 12)]
         public GosocketImpuestosParte ImpuestosParte { get; set; }
 
@@ -606,11 +560,6 @@ namespace Sincro_Sap_Gosocket.Dominio
         [XmlElement("CuotaImp", Order = 4)]
         public decimal? CuotaImp { get; set; }
 
-        //CantidadUni
-        //Porcentaje
-        //Proporcion
-        //VolumenUnidadConsumo
-        //ImpuestoUnidad
         [XmlElement("ExtraInfoImpDetParte", Order = 5)]
         public List<GosocketNameValue> ExtraInfoImpDetParte { get; set; } = new();
 
@@ -623,8 +572,6 @@ namespace Sincro_Sap_Gosocket.Dominio
         public bool ShouldSerializeCuotaImp() => CuotaImp.HasValue;
         public bool ShouldSerializeExtraInfoImpDetParte() => ExtraInfoImpDetParte != null && ExtraInfoImpDetParte.Count > 0;
     }
-
-
 
     #endregion
 
@@ -693,7 +640,6 @@ namespace Sincro_Sap_Gosocket.Dominio
 
         public bool ShouldSerializeMontoExportacion() => MontoExportacion.HasValue;
     }
-
 
     public class GosocketExoneracion
     {
@@ -769,8 +715,7 @@ namespace Sincro_Sap_Gosocket.Dominio
         // =========================
         [XmlElement("PorcentajeCompra", Order = 10)]
         public decimal? PorcentajeCompra { get; set; }
-
- 
+        
 
         // ==========================================================
         // SHOULD SERIALIZE (evita nodos vacíos => evita rechazos)

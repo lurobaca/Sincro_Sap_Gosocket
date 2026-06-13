@@ -105,8 +105,7 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
         /// Puede propagarse si la cancelación ocurre durante operaciones async (lectura de archivo, ejecución SQL, llamada HTTP).
         /// </exception>
         public async Task ProcesarPendientesAsync(int batchSize, CancellationToken ct)
-        {
-      
+        {      
 
             var pendientes = await _repositorioCola.ObtenerPendientesAsync(batchSize, ct);
 
@@ -127,7 +126,6 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                     _logger.LogInformation("Procesando QueueId={QueueId} ObjType={ObjType} DocEntry={DocEntry} DocSubType={DocSubType}",
                              doc.DocumentosPendientes_Id  , doc.ObjType, doc.DocEntry, doc.DocSubType);
 
-
                     // 2) Traer datos + tipo (FE/NC/ND/FEC/FEE)
                     var (tipo, datos) = await ConsultarDocumentoAsync(doc, ct);
 
@@ -138,7 +136,6 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                        
                     var claveComprobante = ObtenerClaveDesdeResultadoSp(datos);
                  
-
                     TrazaArchivo.Escribir($"Se obtuvo la Clave:{claveComprobante} para el comprobante DocNum={doc.DocNum} Tipo={doc.TipoCE} ");
 
                     if (!string.IsNullOrWhiteSpace(claveComprobante))
@@ -164,8 +161,7 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                     }
                     
                     xmlGosocket = NormalizarXml(xmlGosocket);
- 
-                   
+                    
                     var docNumTexto = doc.DocNum.ToString()?.Trim() ?? string.Empty;
 
                     var folioTexto = docNumTexto.Length > 5
@@ -240,7 +236,6 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                         );
                     }
 
-
                     await _repositorioEstados.MarcarWaitingHaciendaAsync(
                         doc.DocumentosPendientes_Id,
                         GlobalDocumentId,
@@ -279,7 +274,6 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                                     );
                              
                     await _repositorioEstados.ActualizaEstadoHaciendaEnSapAsync(actualizacionSapEnvio, ct);
-
 
                     //PENDIENTE DE HABILITAR NO BORRAR
                     //await _servicioActualizacionSap.ActualizarEstadoHaciendaEnSapAsync(actualizacionSapEnvio, ct);
@@ -471,71 +465,7 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
             var datos = await _sp.EjecutarDataTableAsync(spName, parametros, ct);
             return (item.TipoCE, datos);
         }
-
-
-
-        /// <summary>
-        /// Consulta estados de Hacienda vía GoSocket.
-        /// </summary>
-        //public async Task ProcesarSeguimientoHaciendaAsync(int batchSize, CancellationToken ct)
-        //{
-        //    var pendientes = await _repositorioCola.ObtenerPendientesSeguimientoAsync(
-        //        STATUS_WAITING_HACIENDA,
-        //        batchSize,
-        //        ct);
-
-        //    foreach (var doc in pendientes)
-        //    {
-        //        if (string.IsNullOrWhiteSpace(doc.GoSocket_TrackId))
-        //            continue;
-
-        //        try
-        //        {
-        //            var peticion = new PeticionGetDocument
-        //            {
-        //                CodigoDocumento = doc.GoSocket_TrackId.ToString(),
-        //                CodigoPais = "CR"
-        //            };
-
-        //            var respuesta = await _clienteGosocket.ObtenerDocumentoAsync(peticion, ct);
-        //            var json = JsonSerializer.Serialize(respuesta);
-
-        //            var estado = TryParseEstadoHaciendaDesdeJson(json);
-        //            var esFinal = EstadosFinalesHacienda.Contains(estado ?? string.Empty);
-
-        //            if (esFinal)
-        //            {
-        //                await _repositorioEstados.MarcarDoneAsync(
-        //                    doc.DocumentosPendientes_Id,
-        //                    ct);
-        //            }
-        //            else
-        //            {
-        //                await _repositorioEstados.ActualizarSeguimientoHaciendaAsync(
-        //                    doc.DocumentosPendientes_Id,
-        //                    estado,
-        //                    json,
-        //                    esFinal,
-        //                    10,
-        //                    ct);
-        //            }
-
-
-        //        }
-        //        catch (Exception ex)
-        //        {
-        //            _logger.LogError(ex, "Error en seguimiento. DocId={DocId}", doc.DocumentosPendientes_Id);
-
-        //            await _repositorioEstados.MarcarRetryOFalloAsync(
-        //                doc.DocumentosPendientes_Id,
-        //                ex.Message,
-        //                10,
-        //                ct);
-        //        }
-        //    }
-        //}
-
-
+        
         /// <summary>
         /// Consulta estados de Hacienda vía GoSocket.
         /// </summary>
@@ -703,15 +633,6 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
 
             var notaMh = ObtenerNotaMh(documento);
 
-            //if (notaMh?.TimeStamp != null)
-            //    partes.Add($"Fecha MH: {notaMh.TimeStamp:yyyy-MM-dd HH:mm:ss}");
-
-            //if (!string.IsNullOrWhiteSpace(estado))
-            //    partes.Add($"Estado: {estado}");
-
-            //if (!string.IsNullOrWhiteSpace(notaMh?.Code))
-            //    partes.Add($"Código MH: {notaMh.Code}");
-
             if (!string.IsNullOrWhiteSpace(notaMh?.Note))
                 partes.Add(notaMh.Note.Trim());
 
@@ -753,8 +674,7 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                 _ => string.IsNullOrWhiteSpace(codigo) ? "SIN_ESTADO" : $"AUTHORITY_STATUS_{codigo}"
             };
         }
-
-         
+                 
         private static string LimitarTexto(string texto, int maximo)
         {
             if (string.IsNullOrWhiteSpace(texto))
@@ -794,46 +714,6 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                 return null;
             }
         }
-        //private static TipoDocumentoSap MapearTipoDocumentoSap(string tipoCe)
-        //{
-        //    return (tipoCe ?? string.Empty).Trim().ToUpperInvariant() switch
-        //    {
-        //        "FE" => TipoDocumentoSap.Factura,
-        //        "TE" => TipoDocumentoSap.Factura,
-        //        "FEC" => TipoDocumentoSap.Factura,
-        //        "NC" => TipoDocumentoSap.NotaCredito,
-        //        "ND" => TipoDocumentoSap.NotaDebito,
-        //        _ => throw new InvalidOperationException($"TipoCE no soportado para SAP: {tipoCe}")
-        //    };
-        //}
-        //private static string? TryParseEstadoHaciendaDesdeJson(string json)
-        //{
-        //    try
-        //    {
-        //        using var doc = JsonDocument.Parse(json);
-        //        return doc.RootElement.TryGetProperty("Estado", out var v)
-        //            ? v.GetString()
-        //            : null;
-        //    }
-        //    catch { return null; }
-        //}
-        //private static string? TryParseEstadoHaciendaDesdeJson(string json)
-        //{
-        //    try
-        //    {
-        //        using var doc = JsonDocument.Parse(json);
-
-        //        if (!doc.RootElement.TryGetProperty("Datos", out var datos))
-        //            return null;
-
-        //        return datos.TryGetProperty("Estado", out var estado)
-        //            ? estado.GetString()
-        //            : null;
-        //    }
-        //    catch
-        //    {
-        //        return null;
-        //    }
-        //}
+       
     }
 }
