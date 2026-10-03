@@ -188,7 +188,7 @@ namespace Sincro_Sap_Gosocket.Infraestructura.Sql
                         UPDATE {TablaSap}
                         SET
                             U_EstadoHacienda = @EstadoHacienda,
-                            U_RespuestaHacienda = @RespuestaHacienda,
+                            U_InfoMH = @RespuestaHacienda,
                             U_ClaveHacienda = @ClaveHacienda,
                             U_FechaRespuesta = @FechaRespuesta                       
                         WHERE DocEntry = @DocEntry;";

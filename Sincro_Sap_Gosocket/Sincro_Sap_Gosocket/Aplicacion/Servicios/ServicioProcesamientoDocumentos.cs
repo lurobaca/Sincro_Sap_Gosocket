@@ -12,8 +12,8 @@ using Sincro_Sap_Gosocket.Infraestructura.Gosocket.Dtos.Respuestas;
 using Sincro_Sap_Gosocket.Infraestructura.Logs;
 using System;
 using System.Collections.Generic;
-using System.Data;
-using System.IO;
+using System.Data; 
+using System.IO; 
 using System.Text;
 using System.Text.Json;
 using System.Threading;
@@ -195,7 +195,51 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                          $"Folio={peticion.Folio}"
                      );
 
+                    //var xmlBytes = Encoding.UTF8.GetBytes(xmlGosocket);
+                    //var xmlSha256 = Convert.ToHexString(SHA256.HashData(xmlBytes));
+
+                    //var cronometroEnvio = Stopwatch.StartNew();
+
+                    //TrazaArchivo.Escribir(
+                    //    $"[GOSOCKET][INICIO_ENVIO] " +
+                    //    $"QueueId={doc.DocumentosPendientes_Id} | " +
+                    //    $"DocEntry={doc.DocEntry} | " +
+                    //    $"DocNum={doc.DocNum} | " +
+                    //    $"TipoCE={doc.TipoCE} | " +
+                    //    $"TipoResultadoSP={tipo} | " +
+                    //    $"Clave={claveComprobante} | " +
+                    //    $"Folio={peticion.Folio} | " +
+                    //    $"Mapping={peticion.Mapping} | " +
+                    //    $"Async={peticion.Async} | " +
+                    //    $"Sign={peticion.Sign} | " +
+                    //    $"DefaultCertificate={peticion.DefaultCertificate} | " +
+                    //    $"XmlChars={xmlGosocket.Length} | " +
+                    //    $"XmlBytes={xmlBytes.Length} | " +
+                    //    $"XmlSha256={xmlSha256} | " +
+                    //    $"RutaXml={rutaXml}"
+                    //);
+
                     var respuesta = await _clienteGosocket.EnviarDocumentoAutoridadAsync(peticion, ct);
+
+                    //cronometroEnvio.Stop();
+
+                    //var jsonRespuestaCompleta = JsonSerializer.Serialize(
+                    //respuesta,
+                    //new JsonSerializerOptions
+                    //{
+                    //    WriteIndented = true
+                    //});
+
+                    //TrazaArchivo.Escribir(
+                    //    $"[GOSOCKET][FIN_ENVIO] " +
+                    //    $"QueueId={doc.DocumentosPendientes_Id} | " +
+                    //    $"DocNum={doc.DocNum} | " +
+                    //    $"TipoCE={doc.TipoCE} | " +
+                    //    $"Clave={claveComprobante} | " +
+                    //    $"DuracionMs={cronometroEnvio.ElapsedMilliseconds} | " +
+                    //    $"XmlSha256={xmlSha256} | " +
+                    //    $"RespuestaCompleta={jsonRespuestaCompleta}"
+                    //);
 
                     // Convertir a JSON (solo como puente)
                     var json = JsonSerializer.Serialize(respuesta);
@@ -214,6 +258,7 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                     if (!desc.Equals("")) detalle = "Messages: "+ detalle + " | MensajeError:" + desc;
 
                     var TextoRespuesa = $"{detalle}";
+                    //var TextoRespuesa = jsonRespuestaCompleta;
                     TrazaArchivo.Escribir($"GuardarXmlEnDisco Respuesta: {TextoRespuesa}");
                     GuardarXmlEnDisco(doc, tipo, datos.Rows[0], TextoRespuesa, "Respuesta");
 
@@ -252,7 +297,7 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                         Clave = string.IsNullOrWhiteSpace(claveComprobante) ? null : claveComprobante,
                         FechaRespuestaTexto = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
                         CampoEstado = "U_EstadoHacienda",
-                        CampoMensaje = "U_RespuestaHacienda",
+                        CampoMensaje = "U_InfoMH",
                         CampoClave = "U_ClaveHacienda",
                         CampoFechaRespuesta = "U_FechaRespHacienda",
                         Reintenta = "U_Reintenta"
@@ -369,6 +414,10 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
         /// </summary>
         private string GuardarXmlEnDisco(DocumentoCola item, string tipo, DataRow r0, string xml, string prefijo)
         {
+            var fullPath = "";
+            try { 
+            
+           
             TrazaArchivo.Escribir($"Ejecuta GuardarXmlEnDisco del comprobante DocNum={item.DocNum} Tipo={item.TipoCE} ");
 
             // Si no se configuró OutputPath, no se guarda (no se considera error).
@@ -398,12 +447,17 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
 
             // Nombre del archivo dentro de la carpeta del comprobante
             var nombreArchivo = $"{prefijo}.xml";
-            var fullPath = Path.Combine(carpetaComprobante, nombreArchivo);
+              fullPath = Path.Combine(carpetaComprobante, nombreArchivo);
 
             // UTF-8 sin BOM
             var utf8NoBom = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
             File.WriteAllText(fullPath, xml, utf8NoBom);
+            }
+            catch (Exception ex)
+            {
+                TrazaArchivo.Escribir($"Error en GuardarXmlEnDisco el comprobante DocNum={item.DocNum} Tipo={item.TipoCE} Exception={ex.Message} ");
 
+            }
             return fullPath;
         }
         private static string GetString(DataRow r, string col)
@@ -558,7 +612,8 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
 
                     var notaMh = ObtenerNotaMh(documento);
                     var fechaRespuesta = notaMh?.TimeStamp ?? documento.AuthorityTimeStamp;
-                    var mensajeHacienda = ConstruirMensajeHacienda(documento, estado);
+                    //var mensajeHacienda = ConstruirMensajeHacienda(documento, estado);
+                    var mensajeHacienda = JsonSerializer.Serialize(respuesta);
 
                     var esFinal =
                         string.Equals(estado, "ACEPTADO", StringComparison.OrdinalIgnoreCase) ||
@@ -583,7 +638,7 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                             FechaRespuestaTexto = fechaRespuesta?.ToString("yyyy-MM-dd HH:mm:ss")
                            ?? DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
                             CampoEstado = "U_EstadoHacienda",
-                            CampoMensaje = "U_RespuestaHacienda",
+                            CampoMensaje = "U_InfoMH",
                             CampoClave = "U_ClaveHacienda",
                             CampoFechaRespuesta = "U_FechaRespuesta"
                         };
@@ -606,6 +661,31 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                             esFinal,
                             10,
                             ct);
+
+                        var actualizacionSap = new ActualizacionEstadoHacienda
+                        {
+                            //TipoDocumento = MapearTipoDocumentoSap(doc.TipoCE),
+                            TipoDocumento = doc.TipoCE.ToString().Trim(),
+                            DocEntry = doc.DocEntry,
+                            EstadoHacienda = estado,
+                            MensajeHacienda = mensajeHacienda,
+                            Clave = documento.CountryDocumentId,
+                            FechaRespuestaTexto = fechaRespuesta?.ToString("yyyy-MM-dd HH:mm:ss")
+                          ?? DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
+                            CampoEstado = "U_EstadoHacienda",
+                            CampoMensaje = "U_InfoMH",
+                            CampoClave = "U_ClaveHacienda",
+                            CampoFechaRespuesta = "U_FechaRespuesta"
+                        };
+
+                        TrazaArchivo.Escribir($"Ejecuta ActualizarEstadoHaciendaEnSapAsync. Del comprobante DocNm={doc.DocNum} TipoCE={doc.TipoCE} Estado={estado} Mensaje Hacienda={mensajeHacienda}");
+
+                        await _repositorioEstados.ActualizaEstadoHaciendaEnSapAsync(actualizacionSap, ct);
+
+
+
+
+
                     }
                 }
                 catch (Exception ex)
@@ -624,6 +704,27 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                         ex.Message,
                         10,
                         ct);
+
+
+
+                    var actualizacionSap = new ActualizacionEstadoHacienda
+                    {
+                        //TipoDocumento = MapearTipoDocumentoSap(doc.TipoCE),
+                        TipoDocumento = doc.TipoCE.ToString().Trim(),
+                        DocEntry = doc.DocEntry,
+                        EstadoHacienda = "FAIL",
+                        MensajeHacienda = ex.Message,
+                        Clave = "",
+                        FechaRespuestaTexto = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"),
+                        CampoEstado = "U_EstadoHacienda",
+                        CampoMensaje = "U_InfoMH",
+                        CampoClave = "U_ClaveHacienda",
+                        CampoFechaRespuesta = "U_FechaRespuesta"
+                    };
+
+                    TrazaArchivo.Escribir($"Ejecuta ActualizarEstadoHaciendaEnSapAsync. Del comprobante DocNm={doc.DocNum} TipoCE={doc.TipoCE} Estado={"FAIL"} Mensaje Hacienda={ex.Message}");
+
+                    await _repositorioEstados.ActualizaEstadoHaciendaEnSapAsync(actualizacionSap, ct);
                 }
             }
         }
@@ -640,8 +741,8 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
             //    partes.Add($"Fecha MH: {documento.AuthorityTimeStamp:yyyy-MM-dd HH:mm:ss}");
 
             var texto = string.Join(" | ", partes);
-
-            return LimitarTexto(texto, 250);
+            return  texto;
+            //return LimitarTexto(texto, 250);
         }
         private static string ObtenerTag(GetDocumentItem documento, string codigo)
         {

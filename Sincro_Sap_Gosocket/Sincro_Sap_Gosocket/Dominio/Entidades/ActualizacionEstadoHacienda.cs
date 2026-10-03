@@ -14,7 +14,7 @@ namespace Sincro_Sap_Gosocket.Dominio.Entidades
 
 
         public string? CampoEstado { get; set; } = "U_EstadoHacienda";
-        public string? CampoMensaje { get; set; } = "U_RespuestaHacienda";
+        public string? CampoMensaje { get; set; } = "U_InfoMH";
         public string? CampoClave { get; set; } = "U_ClaveHacienda";
         public string? CampoFechaRespuesta { get; set; } = "U_FechaRespHacienda";
         public string? Reintenta { get; set; } = "U_Reintenta";
