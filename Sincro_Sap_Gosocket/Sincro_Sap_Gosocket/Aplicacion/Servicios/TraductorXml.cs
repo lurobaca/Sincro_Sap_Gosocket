@@ -75,7 +75,7 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
             var impuestos = ConstruirImpuestosEncabezadoDesdeSp(r0, totales.MntImp);
             var TipoComprobante = GetString(r0, "TipoComprobante", tipoDocumento);
             var referenciaTipoDoc = GetString(r0, "Referencia_TipoDoc");
-            var esNcDeFee = TipoComprobante == "03" && referenciaTipoDoc == "09";
+            var esNcDeFee = TipoComprobante == "03" && referenciaTipoDoc == "19";
 
             var receptorTipo = (GetString(r0, "Receptor_Tipo") ?? "").Trim().PadLeft(2, '0');
 
