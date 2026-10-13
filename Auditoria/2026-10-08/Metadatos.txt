@@ -1,0 +1,106 @@
+Definicion leida: dbo.SP_Consulta_FE_FES_V44; caracteres=49341
+Definicion leida: dbo.SP_Consulta_FEC_V44; caracteres=39393
+Definicion leida: dbo.SP_Consulta_NC_NCS_V44; caracteres=59206
+Definicion leida: dbo.SP_Consulta_ND_NDS_V44; caracteres=57809
+SAP solo lectura: OADM.TaxIdNum: nvarchar(32)
+SAP solo lectura: OCRD.LicTradNum: nvarchar(32)
+SAP solo lectura: OINV.U_LDT_CodRef: nvarchar(3)
+SAP solo lectura: OINV.U_LDT_FiscalDoc: nvarchar(60)
+SAP solo lectura: OINV.U_LDT_TipoDocRef: nvarchar(2)
+SAP solo lectura: OPCH.U_LDT_CodRef: nvarchar(3)
+SAP solo lectura: OPCH.U_LDT_FiscalDoc: nvarchar(60)
+SAP solo lectura: OPCH.U_LDT_TipoDocRef: nvarchar(2)
+SAP solo lectura: ORIN.U_LDT_CodRef: nvarchar(3)
+SAP solo lectura: ORIN.U_LDT_FiscalDoc: nvarchar(60)
+SAP solo lectura: ORIN.U_LDT_TipoDocRef: nvarchar(2)
+Catalogo SAP: OINV.LDT_CodRef; 1=Anula documento de referencia
+Catalogo SAP: OINV.LDT_CodRef; 2=Corrige monto
+Catalogo SAP: OINV.LDT_CodRef; 4=Referencia a otro documento
+Catalogo SAP: OINV.LDT_CodRef; 5=Sustituye comprobante provisional por contingencia
+Catalogo SAP: OINV.LDT_CodRef; 6=Devolución de mercancía
+Catalogo SAP: OINV.LDT_CodRef; 7=Sustituye comprobante electrónico
+Catalogo SAP: OINV.LDT_CodRef; 8=Factura Endosada
+Catalogo SAP: OINV.LDT_CodRef; 9=Nota de crédito financiera
+Catalogo SAP: OINV.LDT_CodRef; 11=Proveedor No Domiciliado
+Catalogo SAP: OINV.LDT_CodRef; 10=Nota de débito financiera
+Catalogo SAP: OINV.LDT_CodRef; 12=Crédito por exoneración posterior a la facturación
+Catalogo SAP: OINV.LDT_TipoDocRef; 1=Factura electrónica
+Catalogo SAP: OINV.LDT_TipoDocRef; 2=Nota débito electrónica
+Catalogo SAP: OINV.LDT_TipoDocRef; 3=Nota de crédito electrónica
+Catalogo SAP: OINV.LDT_TipoDocRef; 4=Tiquete electrónico
+Catalogo SAP: OINV.LDT_TipoDocRef; 5=Nota de despacho
+Catalogo SAP: OINV.LDT_TipoDocRef; 6=Contrato
+Catalogo SAP: OINV.LDT_TipoDocRef; 7=Procedimiento
+Catalogo SAP: OINV.LDT_TipoDocRef; 8=Comprobante emitido en contingencia
+Catalogo SAP: OINV.LDT_TipoDocRef; 9=Devolución mercadería
+Catalogo SAP: OINV.LDT_TipoDocRef; 10=Hacienda
+Catalogo SAP: OINV.LDT_TipoDocRef; 11=Sustituye factura rechazada por el Receptor del comprobante
+Catalogo SAP: OINV.LDT_TipoDocRef; 12=Sustituye Factura de exportación
+Catalogo SAP: OINV.LDT_TipoDocRef; 13=Facturación mes vencido
+Catalogo SAP: OINV.LDT_TipoDocRef; 14=Especial.
+Catalogo SAP: OINV.LDT_TipoDocRef; 15=Sustituye una Factura electrónica de Compra
+Catalogo SAP: OINV.LDT_TipoDocRef; 16=Comprobante de Proveedor No Domiciliad
+Catalogo SAP: OINV.LDT_TipoDocRef; 17=Nota de Crédito a Factura Electrónica de Compra
+Catalogo SAP: OINV.LDT_TipoDocRef; 18=Nota de Débito a Factura Electrónica de Compra
+Catalogo SAP: OINV.LDT_TipoDocRef; 19=Otros
+Catalogo SAP: OPCH.LDT_CodRef; 1=Anula documento de referencia
+Catalogo SAP: OPCH.LDT_CodRef; 2=Corrige monto
+Catalogo SAP: OPCH.LDT_CodRef; 4=Referencia a otro documento
+Catalogo SAP: OPCH.LDT_CodRef; 5=Sustituye comprobante provisional por contingencia
+Catalogo SAP: OPCH.LDT_CodRef; 6=Devolución de mercancía
+Catalogo SAP: OPCH.LDT_CodRef; 7=Sustituye comprobante electrónico
+Catalogo SAP: OPCH.LDT_CodRef; 8=Factura Endosada
+Catalogo SAP: OPCH.LDT_CodRef; 9=Nota de crédito financiera
+Catalogo SAP: OPCH.LDT_CodRef; 11=Proveedor No Domiciliado
+Catalogo SAP: OPCH.LDT_CodRef; 10=Nota de débito financiera
+Catalogo SAP: OPCH.LDT_CodRef; 12=Crédito por exoneración posterior a la facturación
+Catalogo SAP: OPCH.LDT_TipoDocRef; 1=Factura electrónica
+Catalogo SAP: OPCH.LDT_TipoDocRef; 2=Nota débito electrónica
+Catalogo SAP: OPCH.LDT_TipoDocRef; 3=Nota de crédito electrónica
+Catalogo SAP: OPCH.LDT_TipoDocRef; 4=Tiquete electrónico
+Catalogo SAP: OPCH.LDT_TipoDocRef; 5=Nota de despacho
+Catalogo SAP: OPCH.LDT_TipoDocRef; 6=Contrato
+Catalogo SAP: OPCH.LDT_TipoDocRef; 7=Procedimiento
+Catalogo SAP: OPCH.LDT_TipoDocRef; 8=Comprobante emitido en contingencia
+Catalogo SAP: OPCH.LDT_TipoDocRef; 9=Devolución mercadería
+Catalogo SAP: OPCH.LDT_TipoDocRef; 10=Hacienda
+Catalogo SAP: OPCH.LDT_TipoDocRef; 11=Sustituye factura rechazada por el Receptor del comprobante
+Catalogo SAP: OPCH.LDT_TipoDocRef; 12=Sustituye Factura de exportación
+Catalogo SAP: OPCH.LDT_TipoDocRef; 13=Facturación mes vencido
+Catalogo SAP: OPCH.LDT_TipoDocRef; 14=Especial.
+Catalogo SAP: OPCH.LDT_TipoDocRef; 15=Sustituye una Factura electrónica de Compra
+Catalogo SAP: OPCH.LDT_TipoDocRef; 16=Comprobante de Proveedor No Domiciliad
+Catalogo SAP: OPCH.LDT_TipoDocRef; 17=Nota de Crédito a Factura Electrónica de Compra
+Catalogo SAP: OPCH.LDT_TipoDocRef; 18=Nota de Débito a Factura Electrónica de Compra
+Catalogo SAP: OPCH.LDT_TipoDocRef; 19=Otros
+Catalogo SAP: ORIN.LDT_CodRef; 1=Anula documento de referencia
+Catalogo SAP: ORIN.LDT_CodRef; 2=Corrige monto
+Catalogo SAP: ORIN.LDT_CodRef; 4=Referencia a otro documento
+Catalogo SAP: ORIN.LDT_CodRef; 5=Sustituye comprobante provisional por contingencia
+Catalogo SAP: ORIN.LDT_CodRef; 6=Devolución de mercancía
+Catalogo SAP: ORIN.LDT_CodRef; 7=Sustituye comprobante electrónico
+Catalogo SAP: ORIN.LDT_CodRef; 8=Factura Endosada
+Catalogo SAP: ORIN.LDT_CodRef; 9=Nota de crédito financiera
+Catalogo SAP: ORIN.LDT_CodRef; 11=Proveedor No Domiciliado
+Catalogo SAP: ORIN.LDT_CodRef; 10=Nota de débito financiera
+Catalogo SAP: ORIN.LDT_CodRef; 12=Crédito por exoneración posterior a la facturación
+Catalogo SAP: ORIN.LDT_TipoDocRef; 1=Factura electrónica
+Catalogo SAP: ORIN.LDT_TipoDocRef; 2=Nota débito electrónica
+Catalogo SAP: ORIN.LDT_TipoDocRef; 3=Nota de crédito electrónica
+Catalogo SAP: ORIN.LDT_TipoDocRef; 4=Tiquete electrónico
+Catalogo SAP: ORIN.LDT_TipoDocRef; 5=Nota de despacho
+Catalogo SAP: ORIN.LDT_TipoDocRef; 6=Contrato
+Catalogo SAP: ORIN.LDT_TipoDocRef; 7=Procedimiento
+Catalogo SAP: ORIN.LDT_TipoDocRef; 8=Comprobante emitido en contingencia
+Catalogo SAP: ORIN.LDT_TipoDocRef; 9=Devolución mercadería
+Catalogo SAP: ORIN.LDT_TipoDocRef; 10=Hacienda
+Catalogo SAP: ORIN.LDT_TipoDocRef; 11=Sustituye factura rechazada por el Receptor del comprobante
+Catalogo SAP: ORIN.LDT_TipoDocRef; 12=Sustituye Factura de exportación
+Catalogo SAP: ORIN.LDT_TipoDocRef; 13=Facturación mes vencido
+Catalogo SAP: ORIN.LDT_TipoDocRef; 14=Especial.
+Catalogo SAP: ORIN.LDT_TipoDocRef; 15=Sustituye una Factura electrónica de Compra
+Catalogo SAP: ORIN.LDT_TipoDocRef; 16=Comprobante de Proveedor No Domiciliad
+Catalogo SAP: ORIN.LDT_TipoDocRef; 17=Nota de Crédito a Factura Electrónica de Compra
+Catalogo SAP: ORIN.LDT_TipoDocRef; 18=Nota de Débito a Factura Electrónica de Compra
+Catalogo SAP: ORIN.LDT_TipoDocRef; 19=Otros
+Clave proyecto: Integration.DocumentosPendientes.Clave: varchar(50)
