@@ -1,4 +1,4 @@
-USE [SincroSapGoSocket];
+USE [Pruebas_SincroSapGoSocket];
 GO
 
 -- 1) Crear el usuario en esta base, mapeado al login de SAP (si no existe)
