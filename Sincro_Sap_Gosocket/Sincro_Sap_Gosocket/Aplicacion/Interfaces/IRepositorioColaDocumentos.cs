@@ -25,5 +25,15 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Interfaces
         Task<string> ActualizarConsecutivoHaciendaAsync(string tipo , CancellationToken ct);
 
         Task<string> ActualizarClaveDocumentoPendienteAsync(long documentoPendienteId, string clave, CancellationToken ct);
+
+        /// <summary>
+        /// Guarda la clave e incrementa el contador en una sola transacción,
+        /// antes de enviar el documento a GoSocket.
+        /// </summary>
+        Task ReservarConsecutivoHaciendaAsync(
+            long documentoPendienteId,
+            string clave,
+            string tipo,
+            CancellationToken ct);
     }
 }

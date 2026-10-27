@@ -190,6 +190,176 @@ namespace Sincro_Sap_Gosocket.Infraestructura.Sql
                 ["MR_Aceptado_Parcial"] = "MR_Aceptado_Parcial",   // aceptado parcialmente
                 ["MR_Rechazado"] = "MR_Rechazado",                 // rechazado
             };
+
+        public async Task ReservarConsecutivoHaciendaAsync(
+        long documentoPendienteId,
+        string clave,
+        string tipo,
+        CancellationToken ct)
+        {
+            if (documentoPendienteId <= 0)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(documentoPendienteId),
+                    "El id del documento pendiente no es válido.");
+            }
+
+            if (string.IsNullOrWhiteSpace(clave) || clave.Length != 50)
+            {
+                throw new ArgumentException(
+                    "La clave debe contener exactamente 50 caracteres.",
+                    nameof(clave));
+            }
+
+            if (string.IsNullOrWhiteSpace(tipo) ||
+                !TipoAColumna.TryGetValue(tipo, out var columna))
+            {
+                throw new ArgumentException(
+                    $"Tipo de documento no válido: {tipo}.",
+                    nameof(tipo));
+            }
+
+            var codigoTipoComprobante = columna switch
+            {
+                "FE" => "01",
+                "ND" => "02",
+                "NC" => "03",
+                "TE" => "04",
+                "FEC" => "08",
+                "FEE" => "09",
+                _ => throw new ArgumentException(
+                    $"Tipo no soportado para esta reserva: {tipo}.",
+                    nameof(tipo))
+            };
+
+            // El consecutivo ocupa las posiciones 22 a 41 de la clave.
+            // Substring utiliza posiciones empezando en cero.
+            var consecutivoGenerado = clave.Substring(21, 20);
+
+            foreach (var caracter in consecutivoGenerado)
+            {
+                if (caracter < '0' || caracter > '9')
+                {
+                    throw new ArgumentException(
+                        "El consecutivo incluido en la clave debe ser numérico.",
+                        nameof(clave));
+                }
+            }
+
+            // Dentro del consecutivo: sucursal (3), terminal (5),
+            // tipo de comprobante (2), numeración (10).
+            if (consecutivoGenerado.Substring(8, 2) != codigoTipoComprobante)
+            {
+                throw new InvalidOperationException(
+                    $"El consecutivo de la clave no corresponde al tipo {tipo}.");
+            }
+
+            if (consecutivoGenerado.Substring(10, 10) == "9999999999")
+            {
+                throw new InvalidOperationException(
+                    $"Se agotó la numeración disponible para el tipo {tipo}.");
+            }
+
+            var sql = $@"
+SET NOCOUNT ON;
+SET XACT_ABORT ON;
+
+DECLARE @ClaveActual varchar(50);
+DECLARE @EstadoActual varchar(50);
+
+SELECT
+    @ClaveActual = Clave,
+    @EstadoActual = Status
+FROM {Tabla} WITH (UPDLOCK, HOLDLOCK)
+WHERE DocumentosPendientes_Id = @DocumentoPendienteId;
+
+IF @@ROWCOUNT <> 1
+BEGIN
+    THROW 50001, 'No se encontró el documento pendiente.', 1;
+END;
+
+IF ISNULL(@EstadoActual, '') <> 'PENDING'
+BEGIN
+    THROW 50002, 'El documento ya no está pendiente de envío.', 1;
+END;
+
+IF NULLIF(LTRIM(RTRIM(@ClaveActual)), '') IS NOT NULL
+BEGIN
+    THROW 50003, 'El documento ya tiene una clave. Debe conciliarse antes de reenviarlo.', 1;
+END;
+
+UPDATE {TablaConsecutivos} WITH (UPDLOCK, HOLDLOCK)
+SET [{columna}] =
+    RIGHT(
+        REPLICATE('0', 20) +
+        CONVERT(
+            varchar(30),
+            CONVERT(decimal(20, 0), [{columna}]) + 1
+        ),
+        20
+    )
+WHERE [{columna}] = @ConsecutivoGenerado;
+
+IF @@ROWCOUNT <> 1
+BEGIN
+    THROW 50004, 'El contador cambió o no tiene una fila única. Se canceló la reserva.', 1;
+END;
+
+UPDATE {Tabla}
+SET Clave = @Clave
+WHERE DocumentosPendientes_Id = @DocumentoPendienteId;
+
+IF @@ROWCOUNT <> 1
+BEGIN
+    THROW 50005, 'No se pudo guardar la clave del documento.', 1;
+END;
+";
+
+            using var conexion = await AbrirConexionAsync(ct);
+            using var transaccion = conexion.BeginTransaction();
+
+            try
+            {
+                using var comando = new SqlCommand(sql, conexion, transaccion);
+
+                comando.Parameters.Add(
+                    "@DocumentoPendienteId",
+                    SqlDbType.BigInt).Value = documentoPendienteId;
+
+                comando.Parameters.Add(
+                    "@Clave",
+                    SqlDbType.VarChar,
+                    50).Value = clave;
+
+                comando.Parameters.Add(
+                    "@ConsecutivoGenerado",
+                    SqlDbType.VarChar,
+                    20).Value = consecutivoGenerado;
+
+                await comando.ExecuteNonQueryAsync(ct);
+
+                transaccion.Commit();
+            }
+            catch
+            {
+                try
+                {
+                    transaccion.Rollback();
+                }
+                catch (Exception errorRollback)
+                {
+                    _logger.LogError(
+                        errorRollback,
+                        "No se pudo revertir la reserva. DocumentoPendienteId={DocumentoPendienteId}",
+                        documentoPendienteId);
+                }
+
+                throw;
+            }
+        }
+
+
+
         public async Task<string> ActualizarConsecutivoHaciendaAsync(string tipo , CancellationToken ct)
         {
 

@@ -44,7 +44,7 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                 Documento = new GosocketDocumento
                 {
                     ID = idDocumento,
-                    Encabezado = ConstruirEncabezadoDesdeSp(tipoDocumento, r0),
+                    Encabezado = ConstruirEncabezadoDesdeSp(tipoDocumento, r0,datos),
                     Detalle = ConstruirDetalleDesdeSp(datos), 
                     Referencia = ConstruirReferenciasDesdeSp(datos),
                     Otros = null
@@ -57,7 +57,7 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
             return SerializarUtf8SinBom(dte);
         }
         
-        private static GosocketEncabezado ConstruirEncabezadoDesdeSp(string tipoDocumento, DataRow r0)
+        private static GosocketEncabezado ConstruirEncabezadoDesdeSp(string tipoDocumento, DataRow r0, DataTable datos)
         {
             var emisorTipo = (GetString(r0, "Emisor_Tipo") ?? "").Trim().PadLeft(2, '0');
             var emisorEsExtranjeroNoDomiciliado = tipoDocumento == "FEC" && emisorTipo == "05";
@@ -72,7 +72,7 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
 
 
             var totales = ConstruirTotalesDesdeSp(r0);
-            var impuestos = ConstruirImpuestosEncabezadoDesdeSp(r0, totales.MntImp);
+            var impuestos = ConstruirImpuestosEncabezadoDesdeSp(datos, totales.MntImp);
             var TipoComprobante = GetString(r0, "TipoComprobante", tipoDocumento);
             var referenciaTipoDoc = GetString(r0, "Referencia_TipoDoc");
             var esNcDeFee = TipoComprobante == "03" && referenciaTipoDoc == "19";
@@ -493,24 +493,84 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
 
         #endregion
 
-        private static List<GosocketImpuestoTotal> ConstruirImpuestosEncabezadoDesdeSp(DataRow r0, decimal? mntImp)
+        private static List<GosocketImpuestoTotal>
+    ConstruirImpuestosEncabezadoDesdeSp(
+        DataTable datos, decimal? mntImp)
         {
             var lista = new List<GosocketImpuestoTotal>();
-            if (mntImp <= 0m) return lista;
 
-            // Si tiene código de tarifa en SP, úselo; si no, NO serialice el nodo (null)
-            var codTasa = GetString(r0, "DetalleServicio_ImpuestoCodigoTarifa"); // ajuste al nombre real
-             var ImpuestoCodigo = GetString(r0, "DetalleServicio_ImpuestoCodigo"); // ajuste al nombre real
-            lista.Add(new GosocketImpuestoTotal
+            if (datos == null || datos.Rows.Count == 0)
+                return lista;
+
+            var grupos = datos.AsEnumerable()
+                .Where(r => GetDecimal(
+                    r, "DetalleServicio_ImpuestoMonto") > 0m)
+                .GroupBy(r => new
+                {
+                    Codigo = GetString(
+                        r, "DetalleServicio_ImpuestoCodigo"),
+                    Tarifa = GetString(
+                        r, "DetalleServicio_ImpuestoCodigoTarifa")
+                })
+                .OrderBy(g => g.Key.Codigo)
+                .ThenBy(g => g.Key.Tarifa);
+
+            foreach (var grupo in grupos)
             {
-                TipoImp = ImpuestoCodigo,             
-                CodTasaImp = string.IsNullOrWhiteSpace(codTasa) ? null : codTasa,
-                MontoImp = mntImp
-            });
+                var montoGrupo = grupo.Sum(r =>
+                {
+                    var tieneExoneracion =
+                        r.Table.Columns.Contains(
+                            "Exoneracion_TipoDocumento")
+                        && r["Exoneracion_TipoDocumento"] != DBNull.Value;
+
+                    var ivaCobradoFabrica = GetString(
+                        r, "DetalleServicio_IVACobradoFabrica");
+
+                    var usarNeto =
+                        tieneExoneracion
+                        || ivaCobradoFabrica == "01"
+                        || ivaCobradoFabrica == "02";
+
+                    return usarNeto
+                        ? GetDecimal(
+                            r, "DetalleServicio_ImpuestoNeto", 0m)
+                        : GetDecimal(
+                            r, "DetalleServicio_ImpuestoMonto", 0m);
+                });
+
+                lista.Add(new GosocketImpuestoTotal
+                {
+                    TipoImp = grupo.Key.Codigo,
+                    CodTasaImp = string.IsNullOrWhiteSpace(
+                        grupo.Key.Tarifa)
+                        ? null
+                        : grupo.Key.Tarifa,
+                    MontoImp = montoGrupo
+                });
+            }
 
             return lista;
         }
-     
+
+        //private static List<GosocketImpuestoTotal> ConstruirImpuestosEncabezadoDesdeSp(DataRow r0, decimal? mntImp)
+        //{
+        //    var lista = new List<GosocketImpuestoTotal>();
+        //    if (mntImp <= 0m) return lista;
+
+        //    // Si tiene código de tarifa en SP, úselo; si no, NO serialice el nodo (null)
+        //    var codTasa = GetString(r0, "DetalleServicio_ImpuestoCodigoTarifa"); // ajuste al nombre real
+        //     var ImpuestoCodigo = GetString(r0, "DetalleServicio_ImpuestoCodigo"); // ajuste al nombre real
+        //    lista.Add(new GosocketImpuestoTotal
+        //    {
+        //        TipoImp = ImpuestoCodigo,             
+        //        CodTasaImp = string.IsNullOrWhiteSpace(codTasa) ? null : codTasa,
+        //        MontoImp = mntImp
+        //    });
+
+        //    return lista;
+        //}
+
         private static GosocketTotales ConstruirTotalesDesdeSp(DataRow r0)
         {
             var GTotales = new GosocketTotales

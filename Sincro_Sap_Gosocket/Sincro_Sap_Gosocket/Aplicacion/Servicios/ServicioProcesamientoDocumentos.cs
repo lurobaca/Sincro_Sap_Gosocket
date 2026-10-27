@@ -138,14 +138,40 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                  
                     TrazaArchivo.Escribir($"Se obtuvo la Clave:{claveComprobante} para el comprobante DocNum={doc.DocNum} Tipo={doc.TipoCE} ");
 
-                    if (!string.IsNullOrWhiteSpace(claveComprobante))
+                    //if (!string.IsNullOrWhiteSpace(claveComprobante))
+                    //{
+                    //    TrazaArchivo.Escribir($"Ejecuta ActualizarClaveDocumentoPendienteAsync para el comprobante DocNum={doc.DocNum} Tipo={doc.TipoCE}.");
+                    //    await _repositorioCola.ActualizarClaveDocumentoPendienteAsync(
+                    //        doc.DocumentosPendientes_Id,
+                    //        claveComprobante,
+                    //        ct);
+                    //}
+
+                    if (string.IsNullOrWhiteSpace(claveComprobante))
                     {
-                        TrazaArchivo.Escribir($"Ejecuta ActualizarClaveDocumentoPendienteAsync para el comprobante DocNum={doc.DocNum} Tipo={doc.TipoCE}.");
-                        await _repositorioCola.ActualizarClaveDocumentoPendienteAsync(
-                            doc.DocumentosPendientes_Id,
-                            claveComprobante,
-                            ct);
+                        throw new InvalidOperationException(
+                            $"No se obtuvo la clave para el comprobante DocNum={doc.DocNum}.");
                     }
+
+                    var tipoComprobante = ObtenerTipoComprobanteDesdeResultadoSp(datos);
+
+                    var tipoConsecutivo = tipoComprobante switch
+                    {
+                        "01" => "FE",
+                        "02" => "ND",
+                        "03" => "NC",
+                        "04" => "TE",
+                        "08" => "FEC",
+                        "09" => "FEE",
+                        _ => throw new InvalidOperationException(
+                            $"Tipo de comprobante no soportado: {tipoComprobante}.")
+                    };
+
+                    await _repositorioCola.ReservarConsecutivoHaciendaAsync(
+                        doc.DocumentosPendientes_Id,
+                        claveComprobante,
+                        tipoConsecutivo,
+                        ct);
 
                     TrazaArchivo.Escribir($"Ejecuta el metodo Traducir para el comprobante DocNum={doc.DocNum} Tipo={doc.TipoCE} .");
                     // 3) Traducir (ideal: el traductor sabe el tipo)
@@ -330,11 +356,11 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                         doc.DocumentosPendientes_Id,
                         GlobalDocumentId);
 
-                    var ObtieneTipoComprobante = ObtenerTipoComprobanteDesdeResultadoSp(datos);
-                    if (ObtieneTipoComprobante.Equals("09")){
-                        doc.TipoCE = "FEE";
-                    }
-                    await _repositorioCola.ActualizarConsecutivoHaciendaAsync(doc.TipoCE, ct);
+                    //var ObtieneTipoComprobante = ObtenerTipoComprobanteDesdeResultadoSp(datos);
+                    //if (ObtieneTipoComprobante.Equals("09")){
+                    //    doc.TipoCE = "FEE";
+                    //}
+                    //await _repositorioCola.ActualizarConsecutivoHaciendaAsync(doc.TipoCE, ct);
 
                 }
                 catch (Exception ex)
