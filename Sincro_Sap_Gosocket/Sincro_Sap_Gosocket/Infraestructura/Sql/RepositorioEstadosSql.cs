@@ -47,30 +47,51 @@ namespace Sincro_Sap_Gosocket.Infraestructura.Sql
             await cmd.ExecuteNonQueryAsync(ct);
         }
 
-        public async Task MarcarRetryOFalloAsync(long documentosPendientesId, string lastError, int attemptCount, CancellationToken ct)
+        public async Task MarcarRetryOFalloAsync(
+            long documentosPendientesId,
+            string lastError,
+            int attemptCount,
+            CancellationToken ct)
         {
-            // Regla típica: si ya reintentó mucho => FAIL, si no => RETRY
-            var nuevoStatus = attemptCount >= 5 ? "FAIL" : "RETRY";
+            // IMPORTANTE:
+            // El tercer parámetro representa el máximo de intentos permitidos,
+            // NO la cantidad de intentos que ya realizó el documento.
+            // Se mantiene su nombre para no alterar la firma existente.
+
+            if (attemptCount <= 0)
+                throw new ArgumentOutOfRangeException(nameof(attemptCount));
 
             var sql = $@"
-                        UPDATE {Tabla}
-                        SET
-                            Status = @Status,
-                            LastError = @LastError,
-                            AttemptCount = @AttemptCount,
-                            LastAttemptAt = SYSUTCDATETIME(),
-                            NextAttemptAt = DATEADD(MINUTE, 5, SYSUTCDATETIME()),
-                            LockedBy = NULL,
-                            LockedAt = NULL
-                        WHERE DocumentosPendientes_Id = @Id;";
+        UPDATE {Tabla}
+        SET
+            Status = CASE
+                WHEN ISNULL(AttemptCount, 0) + 1 >= @MaxIntentos
+                    THEN 'FAIL'
+                ELSE 'RETRY'
+            END,
+            LastError = @LastError,
+            AttemptCount = ISNULL(AttemptCount, 0) + 1,
+            LastAttemptAt = SYSUTCDATETIME(),
+            NextAttemptAt = CASE
+                WHEN ISNULL(AttemptCount, 0) + 1 >= @MaxIntentos
+                    THEN NULL
+                ELSE DATEADD(MINUTE, 5, SYSUTCDATETIME())
+            END,
+            LockedBy = NULL,
+            LockedAt = NULL
+        WHERE DocumentosPendientes_Id = @Id;";
 
             using var cn = await _cnFactory.CreateOpenConnectionAsync(ct);
             using var cmd = new SqlCommand(sql, cn);
 
-            cmd.Parameters.AddWithValue("@Id", documentosPendientesId);
-            cmd.Parameters.AddWithValue("@Status", nuevoStatus);
-            cmd.Parameters.AddWithValue("@LastError", (object?)lastError ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@AttemptCount", attemptCount);
+            cmd.Parameters.Add("@Id", SqlDbType.BigInt)
+                .Value = documentosPendientesId;
+
+            cmd.Parameters.Add("@LastError", SqlDbType.NVarChar, -1)
+                .Value = (object?)lastError ?? DBNull.Value;
+
+            cmd.Parameters.Add("@MaxIntentos", SqlDbType.Int)
+                .Value = attemptCount;
 
             await cmd.ExecuteNonQueryAsync(ct);
         }
@@ -100,42 +121,75 @@ namespace Sincro_Sap_Gosocket.Infraestructura.Sql
             await cmd.ExecuteNonQueryAsync(ct);
         }
 
-        public async Task ActualizaEstadoHaciendaEnDocumentosPendientesAsync(long documentosPendientesId, string? haciendaEstado, string? haciendaResponseJson, bool done, int attemptCount, CancellationToken ct)
+
+        public async Task ActualizaEstadoHaciendaEnDocumentosPendientesAsync(
+            long documentosPendientesId,
+            string? haciendaEstado,
+            string? haciendaResponseJson,
+            bool done,
+            int attemptCount,
+            CancellationToken ct)
         {
+            try
+            {
+                // Determinar el estado de seguimiento.
+                var statusFinal = done ? "DONE" : "WAITING_HACIENDA";
 
-            try {
-            var statusFinal = done ? "DONE" : "WAITING_HACIENDA";
+                // AJUSTE:
+                // No modificar AttemptCount durante el seguimiento.
+                // El contador de intentos pertenece al proceso de envío
+                // y se administra mediante MarcarRetryOFalloAsync.
+                //
+                // Se conserva el parámetro attemptCount en la firma
+                // para no afectar la interfaz ni las llamadas existentes.
 
-            var sql = $@"
-                        UPDATE {Tabla}
-                        SET
-                            Hacienda_Estado = @Estado,
-                            Hacienda_ResponseJson = @Resp,
-                            Status = @Status,
-                            AttemptCount = @AttemptCount,
-                            LastAttemptAt = SYSUTCDATETIME(),
-                            NextAttemptAt = CASE WHEN @Status = 'WAITING_HACIENDA' THEN DATEADD(MINUTE, 5, SYSUTCDATETIME()) ELSE NULL END,
-                            LockedBy = NULL,
-                            LockedAt = NULL
-                        WHERE DocumentosPendientes_Id = @Id;";
+                var sql = $@"
+            UPDATE {Tabla}
+            SET
+                Hacienda_Estado = @Estado,
+                Hacienda_ResponseJson = @Resp,
+                Status = @Status,
+                LastAttemptAt = SYSUTCDATETIME(),
+                NextAttemptAt = CASE
+                    WHEN @Status = 'WAITING_HACIENDA'
+                        THEN DATEADD(MINUTE, 5, SYSUTCDATETIME())
+                    ELSE NULL
+                END,
+                LockedBy = NULL,
+                LockedAt = NULL
+            WHERE DocumentosPendientes_Id = @Id;";
 
-            using var cn = await _cnFactory.CreateOpenConnectionAsync(ct);
-            using var cmd = new SqlCommand(sql, cn);
+                using var cn =
+                    await _cnFactory.CreateOpenConnectionAsync(ct);
 
-            cmd.Parameters.AddWithValue("@Id", documentosPendientesId);
-            cmd.Parameters.AddWithValue("@Estado", (object?)haciendaEstado ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@Resp", (object?)haciendaResponseJson ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@Status", statusFinal);
-            cmd.Parameters.AddWithValue("@AttemptCount", attemptCount);
+                using var cmd = new SqlCommand(sql, cn);
 
-            await cmd.ExecuteNonQueryAsync(ct);
+                cmd.Parameters.Add("@Id", SqlDbType.BigInt)
+                    .Value = documentosPendientesId;
 
+                cmd.Parameters.Add("@Estado", SqlDbType.NVarChar, 50)
+                    .Value = (object?)haciendaEstado ?? DBNull.Value;
+
+                cmd.Parameters.Add("@Resp", SqlDbType.NVarChar, -1)
+                    .Value = (object?)haciendaResponseJson ?? DBNull.Value;
+
+                cmd.Parameters.Add("@Status", SqlDbType.VarChar, 50)
+                    .Value = statusFinal;
+
+                await cmd.ExecuteNonQueryAsync(ct);
             }
             catch (Exception ex)
             {
-                TrazaArchivo.Escribir($"Error al actualizar estado Hacienda en ActualizaEstadoHaciendaEnDocumentosPendientesAsync Error={ex.Message}");
+                TrazaArchivo.Escribir(
+                    "Error al actualizar estado Hacienda en " +
+                    "ActualizaEstadoHaciendaEnDocumentosPendientesAsync " +
+                    $"Error={ex.Message}");
 
-                _logger.LogError(ex, "Error al actualizar estado Hacienda en DocumentosPendientes. Id={Id}", documentosPendientesId);
+                _logger.LogError(
+                    ex,
+                    "Error al actualizar estado Hacienda en DocumentosPendientes. Id={Id}",
+                    documentosPendientesId);
+
                 throw;
             }
         }

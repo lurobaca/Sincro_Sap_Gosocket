@@ -15,8 +15,7 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Interfaces
         /// </summary>
         Task<IReadOnlyList<DocumentoCola>> ObtenerPendientesSeguimientoAsync(string status, int batchSize, CancellationToken ct);
 
-        Task<bool> LockearAsync(int documentosPendientesId, string lockedBy, CancellationToken ct);
-
+         Task<bool> LockearAsync(long documentosPendientesId, string lockedBy, CancellationToken ct);
 
         /// <summary>
         /// Incrementa en 1 el consecutivo del tipo indicado (FE, TE, NC, ND, FEC, MR_Aceptado, etc.)
@@ -35,5 +34,15 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Interfaces
             string clave,
             string tipo,
             CancellationToken ct);
+
+        Task<string?> ObtenerClaveReservadaAsync(
+            long documentoPendienteId,
+            CancellationToken ct);
+
+        Task<bool> IntentarIniciarEnvioAsync(
+            long documentoPendienteId,
+            string clave,
+            CancellationToken ct);
+
     }
 }

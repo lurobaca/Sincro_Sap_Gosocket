@@ -191,6 +191,49 @@ namespace Sincro_Sap_Gosocket.Infraestructura.Sql
                 ["MR_Rechazado"] = "MR_Rechazado",                 // rechazado
             };
 
+
+        public async Task<bool> IntentarIniciarEnvioAsync(
+            long documentoPendienteId,
+            string clave,
+            CancellationToken ct)
+        {
+            const string sql = @"
+        UPDATE Integration.DocumentosPendientes
+        SET GoSocket_ResponseJson = @Marca
+        WHERE DocumentosPendientes_Id = @Id
+          AND Status = 'PENDING'
+          AND Clave = @Clave
+          AND GoSocket_TrackId IS NULL
+          AND NULLIF(
+              LTRIM(RTRIM(GoSocket_ResponseJson)), ''
+          ) IS NULL
+          AND NULLIF(
+              LTRIM(RTRIM(Hacienda_Estado)), ''
+          ) IS NULL;";
+
+            var marca = System.Text.Json.JsonSerializer.Serialize(
+                new
+                {
+                    Tipo = "ENVIO_INICIADO",
+                    Clave = clave,
+                    FechaUtc = DateTime.UtcNow
+                });
+
+            using var cn = await AbrirConexionAsync(ct);
+            using var cmd = new SqlCommand(sql, cn);
+
+            cmd.Parameters.Add("@Id", SqlDbType.BigInt)
+                .Value = documentoPendienteId;
+
+            cmd.Parameters.Add("@Clave", SqlDbType.VarChar, 50)
+                .Value = clave;
+
+            cmd.Parameters.Add("@Marca", SqlDbType.NVarChar, -1)
+                .Value = marca;
+
+            return await cmd.ExecuteNonQueryAsync(ct) == 1;
+        }
+
         public async Task ReservarConsecutivoHaciendaAsync(
         long documentoPendienteId,
         string clave,
@@ -359,7 +402,30 @@ END;
         }
 
 
+        public async Task<string?> ObtenerClaveReservadaAsync(
+        long documentoPendienteId,
+        CancellationToken ct)
+        {
+            const string sql = @"
+        SELECT Clave
+        FROM Integration.DocumentosPendientes
+        WHERE DocumentosPendientes_Id = @Id;";
 
+            using var conexion = await AbrirConexionAsync(ct);
+            using var comando = new SqlCommand(sql, conexion);
+
+            comando.Parameters.Add("@Id", SqlDbType.BigInt)
+                .Value = documentoPendienteId;
+
+            var resultado = await comando.ExecuteScalarAsync(ct);
+
+            if (resultado == null || resultado == DBNull.Value)
+                return null;
+
+            var clave = Convert.ToString(resultado)?.Trim();
+
+            return string.IsNullOrWhiteSpace(clave) ? null : clave;
+        }
         public async Task<string> ActualizarConsecutivoHaciendaAsync(string tipo , CancellationToken ct)
         {
 
@@ -440,31 +506,41 @@ END;
             }
         }
 
-        public async Task<bool> LockearAsync(int documentosPendientesId, string lockedBy, CancellationToken ct)
+
+        public async Task<bool> LockearAsync(
+            long documentosPendientesId,
+            string lockedBy,
+            CancellationToken ct)
         {
             if (documentosPendientesId <= 0)
                 throw new ArgumentOutOfRangeException(nameof(documentosPendientesId));
 
             if (string.IsNullOrWhiteSpace(lockedBy))
-                throw new ArgumentException("lockedBy es requerido.", nameof(lockedBy));
+                throw new ArgumentException(
+                    "lockedBy es requerido.",
+                    nameof(lockedBy));
 
             var sql = $@"
-                    UPDATE {Tabla}
-                    SET
-                        LockedBy = @LockedBy,
-                        LockedAt = SYSUTCDATETIME()
-                    WHERE
-                        DocumentosPendientes_Id = @Id
-                        AND LockedAt IS NULL;";
+        UPDATE {Tabla}
+        SET
+            LockedBy = @LockedBy,
+            LockedAt = SYSUTCDATETIME()
+        WHERE
+            DocumentosPendientes_Id = @Id
+            AND LockedAt IS NULL;";
 
             await using var cn = await AbrirConexionAsync(ct);
             await using var cmd = new SqlCommand(sql, cn);
 
-            cmd.Parameters.Add("@Id", SqlDbType.Int).Value = documentosPendientesId;
-            cmd.Parameters.Add("@LockedBy", SqlDbType.NVarChar, 200).Value = lockedBy;
+            cmd.Parameters.Add("@Id", SqlDbType.BigInt)
+                .Value = documentosPendientesId;
+
+            cmd.Parameters.Add("@LockedBy", SqlDbType.NVarChar, 200)
+                .Value = lockedBy;
 
             var filas = await cmd.ExecuteNonQueryAsync(ct);
-            return filas > 0;
+
+            return filas == 1;
         }
 
         private async Task<IReadOnlyList<DocumentoCola>> EjecutarSelectAsync(

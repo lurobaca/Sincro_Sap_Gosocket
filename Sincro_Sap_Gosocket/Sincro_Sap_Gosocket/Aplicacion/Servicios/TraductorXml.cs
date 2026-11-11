@@ -47,7 +47,7 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                     Encabezado = ConstruirEncabezadoDesdeSp(tipoDocumento, r0,datos),
                     Detalle = ConstruirDetalleDesdeSp(datos), 
                     Referencia = ConstruirReferenciasDesdeSp(datos),
-                    Otros = null
+                    Otros = ConstruirOtros(r0)
                 }
             };
             
@@ -56,7 +56,23 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
 
             return SerializarUtf8SinBom(dte);
         }
-        
+        private static GosocketOtros ConstruirOtros(DataRow row)
+        {
+            var otros = new GosocketOtros();
+
+            var ordenCompra = GetString(row, "OrdenCompra");
+
+            if (!string.IsNullOrWhiteSpace(ordenCompra))
+            {
+                otros.OtroTexto.Add(new GosocketExtraInfoDetalle
+                {
+                    Name = "OC",
+                    Value = ordenCompra
+                });
+            }
+
+            return otros;
+        }
         private static GosocketEncabezado ConstruirEncabezadoDesdeSp(string tipoDocumento, DataRow r0, DataTable datos)
         {
             var emisorTipo = (GetString(r0, "Emisor_Tipo") ?? "").Trim().PadLeft(2, '0');
@@ -90,8 +106,8 @@ namespace Sincro_Sap_Gosocket.Aplicacion.Servicios
                 IdDoc = new GosocketIdDoc
                 {
                     Version = "4.4",
-                  Ambiente = "Sandbox",
-                  //  Ambiente = "Productivo",
+                  //Ambiente = "Sandbox",
+                    Ambiente = "Productivo",
                     Tipo = TipoComprobante,
                     Numero = GetString(r0, "CodSeguridad"),      // si viene NULL, lo genera su sistema/GoSocket
                     NumeroInterno =  GetString(r0, "CodSeguridad"),   // si usa el ERP interno

@@ -1036,6 +1036,9 @@ namespace Sincro_Sap_Gosocket.Dominio
         [XmlElement("OtroContenido", Order = 2)]
         public List<GosocketExtraInfoDetalle> OtroContenido { get; set; } = new();
 
+        [XmlElement("OtroOrdenCompra", Order = 3)]
+        public List<GosocketExtraInfoDetalle> OtroOrdenCompra { get; set; } = new();
+
         public bool HasContent()
             => OtroTexto != null && OtroTexto.Count > 0 || OtroContenido != null && OtroContenido.Count > 0;
 
